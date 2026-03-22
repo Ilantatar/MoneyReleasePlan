@@ -92,8 +92,14 @@
   .status-stuck { background: #ffe8e8; color: #c03636; border-color: rgba(192,54,54,.15); }
   .status-cancelled { background: #efefef; color: #666; border-color: rgba(102,102,102,.15); }
   .status-other, .status-empty { background: #f3f4f6; color: #374151; border-color: rgba(55,65,81,.12); }
-  .feature-body > .subsection:first-child { margin-top: 0; }
   .subsection { margin-top: 14px; }
+  /* Nest sub-items under the parent row (left rail + inset) */
+  .feature-body .subsection {
+    margin-left: 4px;
+    padding-left: 18px;
+    border-left: 3px solid rgba(79, 124, 255, 0.35);
+  }
+  .feature-body > .subsection:first-child { margin-top: 0; }
   .subsection-title { font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 8px; }
   .subitems { display: grid; gap: 10px; }
   .subitem {
@@ -105,7 +111,12 @@
   .subitem-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
   .hint { margin-top: 10px; color: var(--muted); font-size: 12px; }
   @media (max-width: 1180px) { .grid, .stats { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-  @media (max-width: 720px) { .grid, .stats { grid-template-columns: 1fr; } .wrap { padding: 14px; } .hero { padding: 20px; } }
+  @media (max-width: 720px) {
+    .grid, .stats { grid-template-columns: 1fr; }
+    .wrap { padding: 14px; }
+    .hero { padding: 20px; }
+    .feature-body .subsection { margin-left: 0; padding-left: 14px; }
+  }
 </style>
 </head>
 <body>
