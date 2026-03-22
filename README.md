@@ -3,6 +3,14 @@
 
 This folder contains a static HTML site ready to host.
 
+## Live site (GitHub Pages)
+
+After **Settings → Pages** is set to deploy from branch **`main`** / **(root)**, the public URL is:
+
+**https://ilantatar.github.io/MoneyReleasePlan/**
+
+(Use the same casing as your GitHub username if the link is ever case-sensitive.)
+
 ## Fastest ways to share a clickable link
 
 ### GitHub Pages
@@ -19,17 +27,16 @@ This folder contains a static HTML site ready to host.
 ### Internal hosting
 If your company has an internal static host, upload `index.html` there and share the published URL.
 
-## Push from this folder (after creating the repo on GitHub)
+## Push updates from this PC
 
-Create an **empty** public repo named `MoneyReleasePlan` (no README/license on GitHub if you want a clean first push), then in PowerShell:
+Repo: [Ilantatar/MoneyReleasePlan](https://github.com/Ilantatar/MoneyReleasePlan)
 
 ```powershell
 cd $HOME\MoneyReleasePlan
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/MoneyReleasePlan.git
+git add -A
+git commit -m "Update site"
 git push -u origin main
 ```
-
-Sign in when Git prompts you (browser or Personal Access Token). Then enable **Settings → Pages → Deploy from branch `main` / (root)**. The site URL will be `https://YOUR_GITHUB_USERNAME.github.io/MoneyReleasePlan/`.
 
 ## Notes
 - This is a single-file static page; no build step is required.
