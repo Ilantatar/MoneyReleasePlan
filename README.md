@@ -8,8 +8,10 @@ Static **GitHub Pages** site: roadmap columns are **release drops** from Monday;
 The published `index.html` is generated from Monday board **`18396795757`** via the [Monday GraphQL API](https://developer.monday.com/).
 
 1. In GitHub: **Settings → Secrets and variables → Actions**, add **`MONDAY_API_TOKEN`** with your Monday API token (same value you use in the Authorization header per [Monday API docs](https://developer.monday.com/)).
-2. Run workflow **Update roadmap from Monday** (**Actions** tab → **Run workflow**). It will refresh `index.html` and push if there are changes.
+2. Run workflow **Update roadmap from Monday** (**Actions** tab → **Run workflow**) **after you change Monday** — GitHub Pages only shows what is in the last committed `index.html`, not live Monday data.
 3. Optional: the workflow also runs weekly (Mondays 06:00 UTC).
+
+If a status looks wrong after a run, your board may have **several Status columns** (e.g. overall **Status** vs **FE**). The generator prefers a column titled **Status**, then **Project status** / **Feature status**, then **Done** if *any* parent status column is Done, then the first remaining status column. Hard-refresh the site (Ctrl+F5) in case the browser cached an old page.
 
 To generate locally (Node 18+):
 

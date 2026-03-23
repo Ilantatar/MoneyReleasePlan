@@ -227,12 +227,45 @@ function findDropColumn(columns) {
   return list.find((c) => /drop|release/i.test(c.title || "") && c.type !== "name");
 }
 
-function findParentStatusColumn(columns) {
-  const list = columns || [];
-  const statusCols = list.filter((c) => c.type === "status");
-  if (!statusCols.length) return null;
-  const named = statusCols.find((c) => /status|project|feature/i.test((c.title || "").toLowerCase()));
-  return named || statusCols[0];
+/** All status-type columns on the main board (order preserved). */
+function statusColumnsInOrder(columns) {
+  return (columns || []).filter((c) => c.type === "status");
+}
+
+/**
+ * Parent rows often have several Status columns (e.g. "Status" vs "FE Status").
+ * Prefer the main column users update for overall state, then any explicit Done.
+ */
+function parentItemStatus(item, columns) {
+  const defs = statusColumnsInOrder(columns);
+  const cvs = (item.column_values || []).filter((cv) => defs.some((d) => d.id === cv.id));
+  if (!cvs.length) return "—";
+
+  const titleEq = (t, want) => (t || "").trim().toLowerCase() === want;
+
+  const pickByTitle = (want) => {
+    const def = defs.find((d) => titleEq(d.title, want));
+    if (!def) return null;
+    const cv = cvs.find((x) => x.id === def.id);
+    return cv ? statusFromCv(cv) : null;
+  };
+
+  for (const want of ["status", "project status", "feature status", "delivery status", "state"]) {
+    const label = pickByTitle(want);
+    if (label && label !== "—") return label;
+  }
+
+  const labels = cvs.map((cv) => statusFromCv(cv)).filter((s) => s && s !== "—");
+  if (labels.some((l) => l.toLowerCase() === "done")) return "Done";
+
+  for (const def of defs) {
+    const cv = cvs.find((x) => x.id === def.id);
+    if (cv) {
+      const t = statusFromCv(cv);
+      if (t && t !== "—") return t;
+    }
+  }
+  return "—";
 }
 
 function statusBadgeClass(label) {
@@ -287,9 +320,7 @@ async function fetchBoard() {
 
 function buildFeatures(board) {
   const dropCol = findDropColumn(board.columns);
-  const statusCol = findParentStatusColumn(board.columns);
   const dropColId = dropCol?.id ?? null;
-  const statusColId = statusCol?.id ?? null;
 
   /** @type {Map<string, Array<{ id: string; name: string; status: string; subitems: { name: string; status: string }[] }>>} */
   const buckets = new Map();
@@ -301,12 +332,7 @@ function buildFeatures(board) {
     const items = group.items_page?.items || group.items || [];
     for (const item of items) {
       const dropLabels = dropsFromItem(item, dropColId, gFallback);
-      const statusCv = statusColId ? item.column_values?.find((c) => c.id === statusColId) : null;
-      let parentStatus = statusFromCv(statusCv);
-      if (parentStatus === "—") {
-        const anyStatus = item.column_values?.find((c) => c.type === "status");
-        parentStatus = statusFromCv(anyStatus);
-      }
+      const parentStatus = parentItemStatus(item, board.columns);
       const subs = (item.subitems || []).map((s) => ({
         name: s.name || "—",
         status: subitemStatus(s),
@@ -347,7 +373,9 @@ function buildFeatures(board) {
     },
     meta: {
       dropColumn: dropCol?.title || dropCol?.id || "(group / unassigned)",
-      statusColumn: statusCol?.title || statusCol?.id || "(first status)",
+      statusColumns: statusColumnsInOrder(board.columns)
+        .map((c) => c.title || c.id)
+        .join(", "),
     },
   };
 }
@@ -430,7 +458,7 @@ async function main() {
   writeFileSync(out, html, "utf8");
   console.log(`Wrote ${out}`);
   console.log(`Drops: ${model.dropKeys.join(" | ")}`);
-  console.log(`Mapped columns — Drop: ${model.meta.dropColumn}; Parent status: ${model.meta.statusColumn}`);
+  console.log(`Mapped columns — Drop: ${model.meta.dropColumn}; Status columns: ${model.meta.statusColumns || "—"}`);
 }
 
 main().catch((e) => {
