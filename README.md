@@ -1,44 +1,43 @@
 
 # eToro Plus Money Roadmap
 
-This folder contains a static HTML site ready to host.
+Static **GitHub Pages** site: roadmap columns are **release drops** from Monday; each feature shows **parent status**; **sub-items only show name and status**.
 
-## Live site (GitHub Pages)
+## Data source (Monday.com, not Excel)
 
-After **Settings → Pages** is set to deploy from branch **`main`** / **(root)**, the public URL is:
+The published `index.html` is generated from Monday board **`18396795757`** via the [Monday GraphQL API](https://developer.monday.com/).
 
-**https://ilantatar.github.io/MoneyReleasePlan/**
+1. In GitHub: **Settings → Secrets and variables → Actions**, add **`MONDAY_API_TOKEN`** with your Monday API token (same value you use in the Authorization header per [Monday API docs](https://developer.monday.com/)).
+2. Run workflow **Update roadmap from Monday** (**Actions** tab → **Run workflow**). It will refresh `index.html` and push if there are changes.
+3. Optional: the workflow also runs weekly (Mondays 06:00 UTC).
 
-(Use the same casing as your GitHub username if the link is ever case-sensitive.)
+To generate locally (Node 18+):
 
-## Fastest ways to share a clickable link
-
-### GitHub Pages
-1. Create a new GitHub repo.
-2. Upload `index.html` to the repo root.
-3. In repo settings, enable **Pages** from the `main` branch.
-4. Share the generated `https://<username>.github.io/<repo>/` link.
-
-### Netlify
-1. Go to Netlify and choose **Add new site**.
-2. Drag-and-drop this folder or the `index.html` file.
-3. Share the generated site URL.
-
-### Internal hosting
-If your company has an internal static host, upload `index.html` there and share the published URL.
-
-## Push updates from this PC
-
-Repo: [Ilantatar/MoneyReleasePlan](https://github.com/Ilantatar/MoneyReleasePlan)
-
-```powershell
-cd $HOME\MoneyReleasePlan
-git add -A
-git commit -m "Update site"
-git push -u origin main
+```bash
+export MONDAY_API_TOKEN="your_token"
+export MONDAY_BOARD_ID="18396795757"   # optional
+npm run generate
 ```
 
-## Notes
-- This is a single-file static page; no build step is required.
-- If you want the page to load from a root URL, keep the filename as `index.html`.
-- `.nojekyll` is included so GitHub Pages serves the HTML as static files without Jekyll processing.
+### Column mapping
+
+- **Drop**: column titled **Drop** or **Release** (or similar). If missing, the script uses a group title that looks like `V1 …`, else **Unassigned**.
+- **Parent status**: first **Status** column on the main board (or the first status-type column on the item).
+- **Sub-item status**: the **status** column on the sub-item row.
+
+If your board uses different titles, adjust `findDropColumn` / `findParentStatusColumn` in `scripts/generate-release-plan.mjs`.
+
+## GitHub Pages
+
+1. Repo **Settings → Pages**: source **Deploy from a branch**, branch **`main`**, folder **`/` (root)**.
+2. Site URL: `https://<username>.github.io/MoneyReleasePlan/` (or your repo name).
+
+Keep **`.nojekyll`** in the root so Pages serves the site as static files.
+
+## Files
+
+| Path | Purpose |
+|------|---------|
+| `index.html` | Generated roadmap (do not hand-edit if you use the workflow) |
+| `scripts/generate-release-plan.mjs` | Fetches Monday and writes `index.html` |
+| `.github/workflows/update-roadmap.yml` | Scheduled + manual regeneration |

@@ -1,0 +1,8 @@
+{
+  "name": "money-release-plan",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-release-plan.mjs"
+  }
+}
