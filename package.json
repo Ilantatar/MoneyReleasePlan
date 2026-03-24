@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "node scripts/generate-release-plan.mjs"
+    "generate": "node scripts/generate-release-plan.mjs",
+    "generate:xlsx": "node scripts/generate-from-xlsx.mjs"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }

@@ -13,13 +13,41 @@ What you *can* do without storing a token in GitHub:
 |----------|-------------------------------------------|--------|
 | **[`live-board.html`](live-board.html)** — embeds the real Monday board in an iframe | **Yes**, for anyone **already logged in** to Monday in that browser | Same UI as Monday, not the custom roadmap layout. Some orgs block iframing (`X-Frame-Options`); if the frame is blank, use the “Open in Monday” link on that page. |
 | **IT-approved tiny proxy** (e.g. Cloudflare Worker, Azure Function, internal API) with the token **only in that environment** | Yes, if your HTML/JS calls *your* proxy | Token never lives in this repo; security reviews this pattern more often than personal tokens in GitHub. |
-| **Keep `index.html` + manual or scheduled export** | Only after you refresh the file (export → script → push) | No API token in GitHub; aligns with “export only” policies. |
+| **Excel export → HTML** (below) | After each export + push (or Action) | **No Monday API token.** Matches your custom roadmap layout. |
 
 ---
 
-## Data source (Monday.com, not Excel)
+## Excel export pipeline (no API token)
 
-The published `index.html` is generated from Monday board **`18396795757`** via the [Monday GraphQL API](https://developer.monday.com/).
+Monday does **not** publish a supported “download this board as XLS” URL you can call without logging in, so **the automated part starts after you export** from the Monday UI (one click). Then everything else can be scripted.
+
+### What you do each time
+
+1. In Monday: **⋯** / **File** → **Export board** → **Excel**.
+2. Save the file as **`data/board-export.xlsx`** in this repo (replace the old file).
+
+### What runs automatically
+
+**Locally (Node 18+):**
+
+```bash
+npm install
+npm run generate:xlsx
+```
+
+Then commit **`index.html`** (and optionally the `.xlsx`) and push. GitHub Pages will serve the new static HTML.
+
+**On GitHub (optional):** workflow **“Build roadmap from Excel export”** runs when you **push** any `data/*.xlsx`. It runs `npm run generate:xlsx` and commits **`index.html`** if it changed. **No `MONDAY_API_TOKEN` secret** is required.
+
+- First time: add `data/board-export.xlsx`, commit, push — the workflow needs `package-lock.json` (already in repo after `npm install`).
+
+The parser matches the **eToro Plus Money** export layout used with `Generate_Release_Plan_Html.ps1` (parent name in column **A**, status **C**, drop **H**; subitem name **B**, status **D**; first three rows skipped). If your export shifts columns, set env vars `MONDAY_XLS_COL_*` (see [`data/README.md`](data/README.md)).
+
+---
+
+## Data source (Monday API — optional)
+
+The published `index.html` can instead be generated from Monday board **`18396795757`** via the [Monday GraphQL API](https://developer.monday.com/).
 
 1. In GitHub: **Settings → Secrets and variables → Actions**, add **`MONDAY_API_TOKEN`** with your Monday API token (same value you use in the Authorization header per [Monday API docs](https://developer.monday.com/)).
 2. Run workflow **Update roadmap from Monday** (**Actions** tab → **Run workflow**) **after you change Monday** — GitHub Pages only shows what is in the last committed `index.html`, not live Monday data.
@@ -56,5 +84,8 @@ Keep **`.nojekyll`** in the root so Pages serves the site as static files.
 |------|---------|
 | `index.html` | Generated roadmap (do not hand-edit if you use the workflow) |
 | `live-board.html` | Full **live** Monday board in an iframe (login required; no API token) |
-| `scripts/generate-release-plan.mjs` | Fetches Monday and writes `index.html` |
-| `.github/workflows/update-roadmap.yml` | Scheduled + manual regeneration |
+| `scripts/generate-release-plan.mjs` | Fetches Monday API and writes `index.html` |
+| `scripts/generate-from-xlsx.mjs` | Reads `data/board-export.xlsx` and writes `index.html` |
+| `scripts/roadmap-render.mjs` | Shared HTML/CSS for both generators |
+| `.github/workflows/update-roadmap.yml` | API-based regeneration (needs token) |
+| `.github/workflows/update-from-xlsx.yml` | Excel-based regeneration (no token) |
