@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Monday board — eToro Plus Money</title>
+  <meta name="robots" content="noindex" />
+  <style>
+    :root { --bar: #1f2937; --link: #93c5fd; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+    .bar {
+      background: var(--bar);
+      color: #e5e7eb;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .bar a { color: var(--link); }
+    .bar strong { color: #fff; }
+    .frame-wrap {
+      height: calc(100% - 48px);
+      background: #111;
+    }
+    iframe {
+      border: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <strong>Live data</strong>
+    <span>Embedded Monday board (same as in the app). You must be logged into Monday in this browser.</span>
+    <a href="index.html">← Static roadmap</a>
+    <a href="https://etoro.monday.com/boards/18396795757/" target="_blank" rel="noopener">Open in Monday ↗</a>
+  </div>
+  <div class="frame-wrap">
+    <iframe
+      title="Monday board eToro Plus Money"
+      src="https://etoro.monday.com/boards/18396795757/"
+      allow="clipboard-read; clipboard-write; fullscreen"
+      loading="lazy"
+    ></iframe>
+  </div>
+</body>
+</html>

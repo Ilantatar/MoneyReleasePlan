@@ -426,7 +426,7 @@ ${CSS}
   <div class="hero">
     <h1>${esc(boardName)}</h1>
     <p>Features grouped by drop, with nested sub-items (name and status only).</p>
-    <p style="margin-top:10px;font-size:12px;opacity:.9">Source: Monday.com board ${esc(BOARD_ID)} · Updated ${esc(generatedAt)}</p>
+    <p style="margin-top:10px;font-size:12px;opacity:.9">Source: Monday.com board ${esc(BOARD_ID)} · Updated ${esc(generatedAt)} · <a href="live-board.html" style="color:#fff;text-decoration:underline">Live board</a> (login required, no API token)</p>
     <div class="stats">
       <div class="stat"><div class="label">Total features</div><div class="value">${stats.uniqueCount}</div><div class="small">unique parent items</div></div>
       <div class="stat"><div class="label">Completed</div><div class="value">${stats.doneCount}</div><div class="small">parent status = Done</div></div>

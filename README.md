@@ -3,6 +3,20 @@
 
 Static **GitHub Pages** site: roadmap columns are **release drops** from Monday; each feature shows **parent status**; **sub-items only show name and status**.
 
+## No Monday API token (company policy)?
+
+**GitHub Pages cannot call Monday’s API from the visitor’s browser** for your private board: the API is meant for server-side use, and browsers will block those requests ([CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)). So a pure `github.io` page **cannot** “on each open, pull fresh JSON from Monday” without **some** approved server or automation that holds credentials.
+
+What you *can* do without storing a token in GitHub:
+
+| Approach | Always up to date when you open the page? | Notes |
+|----------|-------------------------------------------|--------|
+| **[`live-board.html`](live-board.html)** — embeds the real Monday board in an iframe | **Yes**, for anyone **already logged in** to Monday in that browser | Same UI as Monday, not the custom roadmap layout. Some orgs block iframing (`X-Frame-Options`); if the frame is blank, use the “Open in Monday” link on that page. |
+| **IT-approved tiny proxy** (e.g. Cloudflare Worker, Azure Function, internal API) with the token **only in that environment** | Yes, if your HTML/JS calls *your* proxy | Token never lives in this repo; security reviews this pattern more often than personal tokens in GitHub. |
+| **Keep `index.html` + manual or scheduled export** | Only after you refresh the file (export → script → push) | No API token in GitHub; aligns with “export only” policies. |
+
+---
+
 ## Data source (Monday.com, not Excel)
 
 The published `index.html` is generated from Monday board **`18396795757`** via the [Monday GraphQL API](https://developer.monday.com/).
@@ -41,5 +55,6 @@ Keep **`.nojekyll`** in the root so Pages serves the site as static files.
 | Path | Purpose |
 |------|---------|
 | `index.html` | Generated roadmap (do not hand-edit if you use the workflow) |
+| `live-board.html` | Full **live** Monday board in an iframe (login required; no API token) |
 | `scripts/generate-release-plan.mjs` | Fetches Monday and writes `index.html` |
 | `.github/workflows/update-roadmap.yml` | Scheduled + manual regeneration |
