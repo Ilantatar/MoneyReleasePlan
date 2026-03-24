@@ -73,20 +73,24 @@ export const ROADMAP_CSS = `  :root {
   }
   details.feature[open] { box-shadow: 0 14px 30px rgba(31,41,55,.08); }
   summary {
-    list-style: none; cursor: pointer; padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    list-style: none; cursor: pointer; padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;
   }
   summary::-webkit-details-marker { display: none; }
+  /* Chevron + title stay one unit so flex-wrap cannot put chevron on its own row */
+  .feature-title-row {
+    display: flex; align-items: flex-start; flex: 1 1 220px; min-width: 0; gap: 4px;
+  }
   .feature-chevron {
-    flex: 0 0 22px; width: 22px; display: inline-flex; align-items: center; justify-content: center;
-    color: #9ca3af; font-size: 15px; font-weight: 600; line-height: 1; user-select: none;
-    transition: transform 0.15s ease;
+    flex: 0 0 1em; width: 1em; display: flex; align-items: center; justify-content: center;
+    color: #9ca3af; font-size: 15px; font-weight: 600; line-height: 1.25; user-select: none;
+    transition: transform 0.15s ease; margin-top: 1px;
   }
   details.feature[open] > summary .feature-chevron { transform: rotate(90deg); }
-  .feature-chevron-spacer { flex: 0 0 22px; width: 22px; }
+  .feature-chevron-spacer { flex: 0 0 1em; width: 1em; flex-shrink: 0; }
   div.feature-leaf .feature-summary {
-    padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;
   }
-  .feature-title { font-weight: 700; flex: 1 1 240px; line-height: 1.25; }
+  .feature-title { font-weight: 700; line-height: 1.25; flex: 1; min-width: 0; }
   .feature-body { padding: 0 14px 14px; border-top: 1px solid rgba(148,163,184,.16); }
   .badge {
     display: inline-flex; align-items: center; gap: 4px;
@@ -163,9 +167,9 @@ export function renderFeature(f) {
     : "";
 
   if (hasSubs) {
-    return `<details class="feature feature-expandable"><summary><span class="feature-chevron" aria-hidden="true">›</span><span class="feature-title">${title}</span>${badge}</summary>${subBlock}</details>`;
+    return `<details class="feature feature-expandable"><summary><span class="feature-title-row"><span class="feature-chevron" aria-hidden="true">›</span><span class="feature-title">${title}</span></span>${badge}</summary>${subBlock}</details>`;
   }
-  return `<div class="feature feature-leaf"><div class="feature-summary"><span class="feature-chevron-spacer" aria-hidden="true"></span><span class="feature-title">${title}</span>${badge}</div></div>`;
+  return `<div class="feature feature-leaf"><div class="feature-summary"><span class="feature-title-row"><span class="feature-chevron-spacer" aria-hidden="true"></span><span class="feature-title">${title}</span></span>${badge}</div></div>`;
 }
 
 /**
