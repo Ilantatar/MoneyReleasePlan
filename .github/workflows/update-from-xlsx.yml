@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "data/**.xlsx"
+      - "Data/**.xlsx"
   workflow_dispatch:
 
 concurrency:

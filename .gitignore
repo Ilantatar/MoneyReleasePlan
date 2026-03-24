@@ -1,2 +1,3 @@
 node_modules/
-/Data/
+# Extra Monday downloads in capital-D folder (keep only data/board-export.xlsx in git)
+Data/eToro*.xlsx

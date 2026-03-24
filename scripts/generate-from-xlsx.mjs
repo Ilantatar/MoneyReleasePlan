@@ -19,6 +19,16 @@ import { dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+/** Prefer lowercase data/ (Linux CI); Windows often uses same folder as Data/. */
+function resolveDefaultXlsxPath() {
+  if (process.env.BOARD_XLSX) return process.env.BOARD_XLSX;
+  const lower = join(ROOT, "data", "board-export.xlsx");
+  const upperD = join(ROOT, "Data", "board-export.xlsx");
+  if (existsSync(lower)) return lower;
+  if (existsSync(upperD)) return upperD;
+  return lower;
+}
+
 const COL = {
   parentName: Number(process.env.MONDAY_XLS_COL_PARENT_NAME ?? 0),
   subName: Number(process.env.MONDAY_XLS_COL_SUB_NAME ?? 1),
@@ -142,10 +152,10 @@ function buildModelFromParents(parents, boardName) {
 }
 
 function main() {
-  const xlsxPath = process.env.BOARD_XLSX || join(ROOT, "data", "board-export.xlsx");
+  const xlsxPath = resolveDefaultXlsxPath();
   if (!existsSync(xlsxPath)) {
     console.error(`Missing Excel file: ${xlsxPath}`);
-    console.error("Export your board from Monday (Excel), save as data/board-export.xlsx or set BOARD_XLSX.");
+    console.error("Export your board from Monday (Excel), save as data/board-export.xlsx (or Data\\\\board-export.xlsx) or set BOARD_XLSX.");
     process.exit(1);
   }
 
