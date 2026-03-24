@@ -68,12 +68,24 @@ export const ROADMAP_CSS = `  :root {
   .drop-head .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .count { font-size: 12px; color: var(--muted); }
   .drop-body { padding: 12px; display: grid; gap: 12px; }
-  details.feature { background: var(--card); border-radius: 16px; border: 1px solid rgba(148,163,184,.18); box-shadow: 0 8px 22px rgba(31,41,55,.05); overflow: hidden; }
+  details.feature, div.feature.feature-leaf {
+    background: var(--card); border-radius: 16px; border: 1px solid rgba(148,163,184,.18); box-shadow: 0 8px 22px rgba(31,41,55,.05); overflow: hidden;
+  }
   details.feature[open] { box-shadow: 0 14px 30px rgba(31,41,55,.08); }
   summary {
     list-style: none; cursor: pointer; padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   }
   summary::-webkit-details-marker { display: none; }
+  .feature-chevron {
+    flex: 0 0 22px; width: 22px; display: inline-flex; align-items: center; justify-content: center;
+    color: #9ca3af; font-size: 15px; font-weight: 600; line-height: 1; user-select: none;
+    transition: transform 0.15s ease;
+  }
+  details.feature[open] > summary .feature-chevron { transform: rotate(90deg); }
+  .feature-chevron-spacer { flex: 0 0 22px; width: 22px; }
+  div.feature-leaf .feature-summary {
+    padding: 14px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
   .feature-title { font-weight: 700; flex: 1 1 240px; line-height: 1.25; }
   .feature-body { padding: 0 14px 14px; border-top: 1px solid rgba(148,163,184,.16); }
   .badge {
@@ -140,15 +152,20 @@ export function dropSortKey(label) {
 
 export function renderFeature(f) {
   const badge = `<span class="badge ${statusBadgeClass(f.status)}">${esc(f.status)}</span>`;
-  const subBlock =
-    f.subitems.length > 0
-      ? `<div class="feature-body"><div class="subsection"><div class="subsection-title">Subitems</div><div class="subitems">${f.subitems
-          .map(
-            (s) => `<div class="subitem"><div class="subitem-top"><div class="subitem-name">${esc(s.name)}</div><div class="subitem-badges"><span class="badge ${statusBadgeClass(s.status)}">${esc(s.status)}</span></div></div></div>`
-          )
-          .join("")}</div></div></div>`
-      : "";
-  return `<details class="feature"><summary><span class="feature-title">${esc(f.name)}</span>${badge}</summary>${subBlock}</details>`;
+  const title = esc(f.name);
+  const hasSubs = f.subitems.length > 0;
+  const subBlock = hasSubs
+    ? `<div class="feature-body"><div class="subsection"><div class="subsection-title">Subitems</div><div class="subitems">${f.subitems
+        .map(
+          (s) => `<div class="subitem"><div class="subitem-top"><div class="subitem-name">${esc(s.name)}</div><div class="subitem-badges"><span class="badge ${statusBadgeClass(s.status)}">${esc(s.status)}</span></div></div></div>`
+        )
+        .join("")}</div></div></div>`
+    : "";
+
+  if (hasSubs) {
+    return `<details class="feature feature-expandable"><summary><span class="feature-chevron" aria-hidden="true">›</span><span class="feature-title">${title}</span>${badge}</summary>${subBlock}</details>`;
+  }
+  return `<div class="feature feature-leaf"><div class="feature-summary"><span class="feature-chevron-spacer" aria-hidden="true"></span><span class="feature-title">${title}</span>${badge}</div></div>`;
 }
 
 /**
