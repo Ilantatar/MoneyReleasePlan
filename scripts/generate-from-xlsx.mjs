@@ -4,6 +4,8 @@
  * Layout matches Generate_Release_Plan_Html.ps1 / typical eToro Plus Money export:
  * - Skip first 3 sheet rows; parent name in column A; subitems: A blank, name in B, status in D.
  * - Parent status column C, Drop column H (0-based: 2 and 7).
+ * - Subitem Drop column E (0-based: 4) — subitems shown only under matching drop buckets.
+ * - Parents with no Drop are omitted; subitems under a skipped parent are ignored.
  *
  * Env:
  *   BOARD_XLSX — path to .xlsx (default: data/board-export.xlsx)
@@ -34,6 +36,7 @@ const COL = {
   subName: Number(process.env.MONDAY_XLS_COL_SUB_NAME ?? 1),
   parentStatus: Number(process.env.MONDAY_XLS_COL_PARENT_STATUS ?? 2),
   subStatus: Number(process.env.MONDAY_XLS_COL_SUB_STATUS ?? 3),
+  subDrop: Number(process.env.MONDAY_XLS_COL_SUB_DROP ?? 4),
   drop: Number(process.env.MONDAY_XLS_COL_DROP ?? 7),
 };
 
@@ -45,13 +48,19 @@ function cell(row, i) {
   return String(v).trim();
 }
 
+/** Split Drop cell; empty → [] (parent with no drop is excluded from the roadmap). */
 function splitDrops(raw) {
   const t = (raw || "").trim();
-  if (!t) return ["Unassigned"];
+  if (!t) return [];
   return t
     .split(/[,;]+/)
     .map((x) => x.trim())
     .filter(Boolean);
+}
+
+/** Distinct non-empty drop labels for a parent row. */
+function parentDropLabels(dropRaw) {
+  return [...new Set(splitDrops(dropRaw))];
 }
 
 /**
@@ -59,7 +68,7 @@ function splitDrops(raw) {
  */
 function parseMondayExportMatrix(matrix) {
   let skipNext = false;
-  /** @type {{ id: string, name: string, status: string, dropRaw: string, subitems: { name: string, status: string }[] } | null} */
+  /** @type {{ id: string, name: string, status: string, dropRaw: string, subitems: { name: string, status: string, dropRaw: string }[] } | null} */
   let current = null;
   const parents = [];
 
@@ -73,6 +82,7 @@ function parseMondayExportMatrix(matrix) {
     const c = cell(row, COL.parentStatus);
     const d = cell(row, COL.subStatus);
     const dropVal = cell(row, COL.drop);
+    const subDropVal = cell(row, COL.subDrop);
 
     if (skipNext) {
       skipNext = false;
@@ -86,6 +96,11 @@ function parseMondayExportMatrix(matrix) {
     if (a === "Name" && c === "Status") continue;
 
     if (a !== "") {
+      const pDrops = parentDropLabels(dropVal);
+      if (pDrops.length === 0) {
+        current = null;
+        continue;
+      }
       current = {
         id: `xlsx-${parents.length}-${a.slice(0, 24)}`,
         name: a,
@@ -100,6 +115,7 @@ function parseMondayExportMatrix(matrix) {
       current.subitems.push({
         name: b,
         status: d || "—",
+        dropRaw: subDropVal,
       });
     }
   }
@@ -107,33 +123,46 @@ function parseMondayExportMatrix(matrix) {
   return parents;
 }
 
+/** Subitem appears in bucket `bucketKey` if its Drop matches, or it has no sub-Drop and parent is in that bucket. */
+function subitemsForBucket(parentDropKeys, subitems, bucketKey) {
+  return subitems
+    .filter((s) => {
+      const sd = [...new Set(splitDrops(s.dropRaw))];
+      if (sd.length === 0) return parentDropKeys.includes(bucketKey);
+      return sd.includes(bucketKey);
+    })
+    .map((s) => ({ name: s.name, status: s.status }));
+}
+
 function buildModelFromParents(parents, boardName) {
   /** @type {Map<string, Array<{ id: string; name: string; status: string; subitems: { name: string; status: string }[] }>>} */
   const buckets = new Map();
-  /** @type {Map<string, object>} */
-  const idToFeature = new Map();
+  /** @type {Map<string, { status: string }>} */
+  const idToParent = new Map();
 
   for (const p of parents) {
-    const dropLabels = splitDrops(p.dropRaw);
-    const feature = {
-      id: p.id,
-      name: p.name,
-      status: p.status,
-      subitems: p.subitems,
-    };
-    if (!idToFeature.has(p.id)) idToFeature.set(p.id, feature);
+    const dropLabels = parentDropLabels(p.dropRaw);
+    if (dropLabels.length === 0) continue;
+
+    if (!idToParent.has(p.id)) idToParent.set(p.id, { status: p.status });
+
     for (const d of dropLabels) {
-      const key = d || "Unassigned";
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key).push(feature);
+      if (!buckets.has(d)) buckets.set(d, []);
+      const subFiltered = subitemsForBucket(dropLabels, p.subitems, d);
+      buckets.get(d).push({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        subitems: subFiltered,
+      });
     }
   }
 
   const dropKeys = [...buckets.keys()].sort((a, b) => dropSortKey(a) - dropSortKey(b) || a.localeCompare(b));
 
-  const uniqueCount = idToFeature.size;
+  const uniqueCount = idToParent.size;
   let doneCount = 0;
-  for (const f of idToFeature.values()) {
+  for (const f of idToParent.values()) {
     if (String(f.status).toLowerCase() === "done") doneCount++;
   }
   const progress = uniqueCount ? Math.round((doneCount / uniqueCount) * 100) : 0;

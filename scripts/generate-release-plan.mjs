@@ -158,6 +158,26 @@ function subitemStatus(sub) {
   return statusFromCv(cv);
 }
 
+/** Parent drop labels; omits Unassigned / empty. Skip item when this is empty. */
+function parentDropLabelsFromItem(item, dropColId, groupTitleFallback) {
+  const raw = dropsFromItem(item, dropColId, dropColId ? null : groupTitleFallback);
+  return [...new Set((raw || []).filter((d) => d && String(d).trim() && d !== "Unassigned"))];
+}
+
+/** Subitem shown in bucket when its Drop matches, or subitem has no Drop and parent is in that bucket. */
+function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId) {
+  return (subitems || [])
+    .filter((sub) => {
+      const sd = parentDropLabelsFromItem(sub, dropColId, null);
+      if (sd.length === 0) return parentDropKeys.includes(bucketKey);
+      return sd.includes(bucketKey);
+    })
+    .map((s) => ({
+      name: s.name || "—",
+      status: subitemStatus(s),
+    }));
+}
+
 async function fetchBoard() {
   if (!TOKEN) {
     throw new Error("MONDAY_API_TOKEN is not set.");
@@ -189,39 +209,38 @@ function buildFeatures(board) {
 
   /** @type {Map<string, Array<{ id: string; name: string; status: string; subitems: { name: string; status: string }[] }>>} */
   const buckets = new Map();
-  /** @type {Map<string, { id: string; name: string; status: string; subitems: { name: string; status: string }[] }>} */
-  const idToFeature = new Map();
+  /** @type {Map<string, { status: string }>} */
+  const idToParent = new Map();
 
   for (const group of board.groups || []) {
     const gFallback = groupTitleAsDrop(group.title);
     const items = group.items_page?.items || group.items || [];
     for (const item of items) {
-      const dropLabels = dropsFromItem(item, dropColId, gFallback);
+      const dropLabels = parentDropLabelsFromItem(item, dropColId, gFallback);
+      if (dropLabels.length === 0) continue;
+
       const parentStatus = parentItemStatus(item, board.columns);
-      const subs = (item.subitems || []).map((s) => ({
-        name: s.name || "—",
-        status: subitemStatus(s),
-      }));
-      const feature = {
-        id: item.id,
-        name: item.name || "—",
-        status: parentStatus,
-        subitems: subs,
-      };
-      if (!idToFeature.has(item.id)) idToFeature.set(item.id, feature);
+      const name = item.name || "—";
+      if (!idToParent.has(item.id)) idToParent.set(item.id, { status: parentStatus });
+
       for (const d of dropLabels) {
-        const key = d || "Unassigned";
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(feature);
+        if (!buckets.has(d)) buckets.set(d, []);
+        const subFiltered = subitemsForBucketFromApi(item.subitems, d, dropLabels, dropColId);
+        buckets.get(d).push({
+          id: item.id,
+          name,
+          status: parentStatus,
+          subitems: subFiltered,
+        });
       }
     }
   }
 
   const dropKeys = [...buckets.keys()].sort((a, b) => dropSortKey(a) - dropSortKey(b) || a.localeCompare(b));
 
-  const uniqueCount = idToFeature.size;
+  const uniqueCount = idToParent.size;
   let doneCount = 0;
-  for (const f of idToFeature.values()) {
+  for (const f of idToParent.values()) {
     if (String(f.status).toLowerCase() === "done") doneCount++;
   }
   const progress = uniqueCount ? Math.round((doneCount / uniqueCount) * 100) : 0;
