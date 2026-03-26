@@ -74,7 +74,8 @@ If your board uses different titles, adjust `findDropColumn` / `findParentStatus
 ## GitHub Pages
 
 1. Repo **Settings → Pages**: source **Deploy from a branch**, branch **`main`**, folder **`/` (root)**.
-2. Site URL: `https://<username>.github.io/MoneyReleasePlan/` (or your repo name).
+2. **Organization repos:** site URL is usually `https://<org>.github.io/<repo>/` — for example **`https://eToro.github.io/MoneyReleasePlan/`** once Pages is enabled (exact URL appears on the Pages settings screen).
+3. **Private repos:** GitHub Pages for private repositories may require **GitHub Enterprise** or org policy allowing internal Pages; if disabled, use an org-approved host (e.g. internal static hosting) or make the repo **public** if policy allows.
 
 Keep **`.nojekyll`** in the root so Pages serves the site as static files.
 
