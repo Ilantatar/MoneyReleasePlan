@@ -1,9 +1,7 @@
 node_modules/
 # Extra Monday downloads in capital-D folder (keep only data/board-export.xlsx in git)
 Data/eToro*.xlsx
-
-# Local / generated comparison artifacts (may contain internal data)
-jira-all-issues.json
-xlsx-dump.json
-xlsx-dump-temp.json
 ~$*
+
+# Local copies if you still run JPD compare from this folder
+/compare-monday-jpd.*

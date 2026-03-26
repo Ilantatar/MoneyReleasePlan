@@ -3,6 +3,8 @@
 
 Static **GitHub Pages** site: roadmap columns are **release drops** from Monday; each feature shows **parent status**; **sub-items only show name and status**.
 
+To compare this board’s **Drop** column (Excel export) against **Jira Product Discovery (EPP) NWLD**, use the sibling repo **[eToro/monday-jpd-drop-compare](https://github.com/eToro/monday-jpd-drop-compare)** (not part of this site’s build).
+
 ## No Monday API token (company policy)?
 
 **GitHub Pages cannot call Monday’s API from the visitor’s browser** for your private board: the API is meant for server-side use, and browsers will block those requests ([CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)). So a pure `github.io` page **cannot** “on each open, pull fresh JSON from Monday” without **some** approved server or automation that holds credentials.
