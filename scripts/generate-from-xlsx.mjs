@@ -4,7 +4,7 @@
  * Layout matches Generate_Release_Plan_Html.ps1 / typical eToro Plus Money export:
  * - Skip first 3 sheet rows; parent name in column A; subitems: A blank, name in B, status in D.
  * - Parent status column C, Drop column H (0-based: 2 and 7).
- * - Subitem Drop column E (0-based: 4) — subitems shown only under matching drop buckets.
+ * - Subitem Drop column F (0-based: 5); column E is often JIRA — subitems shown only under matching drop buckets.
  * - Parents with no Drop are omitted; subitems under a skipped parent are ignored.
  *
  * Env:
@@ -36,7 +36,7 @@ const COL = {
   subName: Number(process.env.MONDAY_XLS_COL_SUB_NAME ?? 1),
   parentStatus: Number(process.env.MONDAY_XLS_COL_PARENT_STATUS ?? 2),
   subStatus: Number(process.env.MONDAY_XLS_COL_SUB_STATUS ?? 3),
-  subDrop: Number(process.env.MONDAY_XLS_COL_SUB_DROP ?? 4),
+  subDrop: Number(process.env.MONDAY_XLS_COL_SUB_DROP ?? 5),
   drop: Number(process.env.MONDAY_XLS_COL_DROP ?? 7),
 };
 
@@ -67,7 +67,6 @@ function parentDropLabels(dropRaw) {
  * Parse sheet matrix using the same row rules as Generate_Release_Plan_Html.ps1.
  */
 function parseMondayExportMatrix(matrix) {
-  let skipNext = false;
   /** @type {{ id: string, name: string, status: string, dropRaw: string, subitems: { name: string, status: string, dropRaw: string }[] } | null} */
   let current = null;
   const parents = [];
@@ -84,12 +83,7 @@ function parseMondayExportMatrix(matrix) {
     const dropVal = cell(row, COL.drop);
     const subDropVal = cell(row, COL.subDrop);
 
-    if (skipNext) {
-      skipNext = false;
-      continue;
-    }
     if (a === "Subitems") {
-      skipNext = true;
       continue;
     }
     if (b === "Name" && c === "Owner" && d === "Status") continue;

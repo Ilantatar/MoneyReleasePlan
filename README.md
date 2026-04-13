@@ -43,7 +43,7 @@ Then commit **`index.html`** (and optionally the `.xlsx`) and push. GitHub Pages
 
 - First time: add `data/board-export.xlsx`, commit, push — the workflow needs `package-lock.json` (already in repo after `npm install`).
 
-The parser matches the **eToro Plus Money** export layout used with `Generate_Release_Plan_Html.ps1` (parent name in column **A**, status **C**, drop **H**; subitem name **B**, status **D**; first three rows skipped). If your export shifts columns, set env vars `MONDAY_XLS_COL_*` (see [`data/README.md`](data/README.md)).
+The parser matches the **eToro Plus Money** Monday export (parent name **A**, status **C**, drop **H**; subitem name **B**, status **D**, subitem drop **F** — **E** is often JIRA; first three rows skipped). Older layouts may use subitem drop in **E**; set `MONDAY_XLS_COL_SUB_DROP=4` if needed. If your export shifts columns, set env vars `MONDAY_XLS_COL_*` (see [`data/README.md`](data/README.md)).
 
 ---
 
