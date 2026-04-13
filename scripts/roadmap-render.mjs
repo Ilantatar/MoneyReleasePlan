@@ -376,7 +376,7 @@ ${ROADMAP_CSS}
     <div class="hero-main-row">
       <div class="hero-compact-stats">
         <div class="hero-compact-stat"><div class="label">Total features</div><div class="value">${stats.uniqueCount}</div><div class="small">parent items</div></div>
-        <div class="hero-compact-stat"><div class="label">Completed</div><div class="value">${stats.doneCount}</div><div class="small">at 100%</div></div>
+        <div class="hero-compact-stat"><div class="label">Completed sub items</div><div class="value">${stats.doneCount}</div><div class="small">at 100%</div></div>
       </div>
       <div class="hero-progress-panel">
         <div class="hero-overall-progress">
