@@ -31,22 +31,89 @@ export const ROADMAP_CSS = `  :root {
   }
   .hero h1 { margin: 0; font-size: 30px; letter-spacing: -0.03em; }
   .hero p { margin: 8px 0 0; opacity: .9; }
-  .stats {
+  .hero-main-row {
     margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 18px 22px;
   }
-  .stat {
+  .hero-compact-stats {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 100px;
+    max-width: 118px;
+  }
+  .hero-compact-stat {
     background: rgba(255,255,255,.14);
     border: 1px solid rgba(255,255,255,.18);
-    border-radius: 18px;
-    padding: 16px;
+    border-radius: 12px;
+    padding: 8px 10px;
     backdrop-filter: blur(8px);
   }
-  .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; opacity: .85; }
-  .stat .value { font-size: 34px; font-weight: 800; margin-top: 6px; }
-  .stat .small { font-size: 13px; opacity: .9; margin-top: 4px; }
+  .hero-compact-stat .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    opacity: .85;
+    line-height: 1.2;
+  }
+  .hero-compact-stat .value { font-size: 22px; font-weight: 800; margin-top: 2px; line-height: 1.1; }
+  .hero-compact-stat .small { font-size: 10px; opacity: .88; margin-top: 2px; line-height: 1.2; }
+  .hero-progress-panel {
+    flex: 1 1 0;
+    min-width: min(100%, 520px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .hero-overall-progress { min-width: 0; }
+  .hero-overall-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .hero-progress-label { font-size: 12px; opacity: .92; }
+  .hero-overall-pct { font-size: 18px; font-weight: 800; opacity: .95; }
+  .hero-drop-bars-head {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    opacity: .8;
+    margin-top: 2px;
+  }
+  .hero-drop-bars {
+    display: grid;
+    gap: 10px 14px;
+    min-width: 0;
+  }
+  .hero-drop-bar-item { min-width: 0; }
+  .hero-drop-bar-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    opacity: .92;
+  }
+  .hero-drop-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero-drop-pct { font-weight: 800; flex-shrink: 0; }
+  .hero-progress-track {
+    height: 10px; border-radius: 999px; background: rgba(255,255,255,.22);
+    overflow: hidden; border: 1px solid rgba(255,255,255,.2);
+  }
+  .hero-progress-track.hero-drop-track { height: 8px; }
+  .hero-progress-fill {
+    height: 100%; border-radius: 999px;
+    background: rgba(255,255,255,.92);
+    transition: width 0.35s ease;
+  }
+  .hero-progress-fill.hero-drop-fill { box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
   .content { margin-top: 22px; }
   .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; color: var(--muted); font-size: 13px; }
   .pill { padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,.8); box-shadow: var(--shadow); }
@@ -122,8 +189,16 @@ export const ROADMAP_CSS = `  :root {
   .submeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
   .submeta-pill { font-size: 11px; color: #4b5563; background: rgba(255,255,255,.9); border: 1px solid rgba(148,163,184,.16); border-radius: 999px; padding: 5px 8px; }
   .hint { margin-top: 10px; color: var(--muted); font-size: 12px; }
-  @media (max-width: 1180px) { .grid, .stats { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-  @media (max-width: 720px) { .grid, .stats, .meta-grid { grid-template-columns: 1fr; } .wrap { padding: 14px; } .hero { padding: 20px; } }
+  @media (max-width: 1180px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .hero-drop-bars { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
+  @media (max-width: 720px) {
+    .grid, .meta-grid { grid-template-columns: 1fr; }
+    .wrap { padding: 14px; }
+    .hero { padding: 20px; }
+    .hero-main-row { flex-direction: column; }
+    .hero-compact-stats { flex-direction: row; max-width: none; }
+    .hero-compact-stat { flex: 1; }
+    .hero-drop-bars { grid-template-columns: 1fr !important; }
+  }
 `;
 
 export function esc(s) {
@@ -152,6 +227,81 @@ export function dropSortKey(label) {
   const m = String(label).match(/V\s*(\d+)/i);
   if (m) return parseInt(m[1], 10) * 10000 + String(label).length;
   return 50000 + String(label).charCodeAt(0);
+}
+
+/**
+ * Maps a status label to a progress percent, or `null` if excluded from averages (cancelled).
+ * Rules: Done/deployment 100%; QA 85%; development (incl. Dev WIP / FE dev) 60%; groomed/grooming 25%; cancelled omitted.
+ */
+export function statusProgressPercent(raw) {
+  const s = String(raw ?? "")
+    .toLowerCase()
+    .trim();
+  if (!s || s === "—") return 0;
+  if (s.includes("cancel")) return null;
+
+  if (s.includes("deployment")) return 100;
+  if (s === "done") return 100;
+  if (/\bdone\b/.test(s) && !s.includes("not done") && !s.includes("wip")) return 100;
+
+  if (/\bqa\b/.test(s) || s.includes("in qa")) return 85;
+
+  if (s.includes("development") || (s.includes("dev") && s.includes("wip"))) return 60;
+
+  if (s.includes("groom")) return 25;
+
+  return 0;
+}
+
+/**
+ * Weighted progress from unique parent rows: each non-cancelled sub-item counts once;
+ * parents with no countable sub-items use parent status. Cancelled sub-items are skipped.
+ * @param parentRows {Array<{ status: string, subitems?: { status: string }[] }>}
+ */
+export function computeSubitemWeightedProgress(parentRows) {
+  let sum = 0;
+  let n = 0;
+  let doneCount = 0;
+
+  for (const row of parentRows) {
+    const subs = row.subitems || [];
+    const weights = subs.map((t) => statusProgressPercent(t.status)).filter((w) => w !== null);
+
+    if (weights.length > 0) {
+      for (const w of weights) {
+        sum += w;
+        n++;
+        if (w >= 100) doneCount++;
+      }
+    } else {
+      const w = statusProgressPercent(row.status);
+      if (w !== null) {
+        sum += w;
+        n++;
+        if (w >= 100) doneCount++;
+      }
+    }
+  }
+
+  const progress = n ? Math.round(sum / n) : 0;
+  return { progress, doneCount, weightedCount: n };
+}
+
+/**
+ * Weighted progress for each drop column (same rules as overall; uses sub-items visible in that bucket).
+ * @param dropKeys {string[]}
+ * @param buckets {Map<string, Array<{ status: string, subitems: { status: string }[] }>>}
+ */
+export function computePerDropProgress(dropKeys, buckets) {
+  return dropKeys.map((drop, i) => {
+    const features = buckets.get(drop) || [];
+    const rows = features.map((f) => ({
+      status: f.status,
+      subitems: (f.subitems || []).map((s) => ({ status: s.status })),
+    }));
+    const { progress } = computeSubitemWeightedProgress(rows);
+    return { drop, progress, colorIdx: (i % 4) + 1 };
+  });
 }
 
 export function renderFeature(f) {
@@ -184,6 +334,17 @@ export function renderRoadmapHtml(model, opts) {
       ? `grid-template-columns: repeat(${Math.max(dropKeys.length, 1)}, minmax(0, 1fr));`
       : "grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));";
 
+  const perDrop = computePerDropProgress(dropKeys, buckets);
+  const dropBarsGridStyle =
+    dropKeys.length <= 4
+      ? `grid-template-columns: repeat(${Math.max(dropKeys.length, 1)}, minmax(0, 1fr));`
+      : "grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));";
+  const dropBarsHtml = perDrop
+    .map(
+      (d) => `<div class="hero-drop-bar-item"><div class="hero-drop-bar-top"><span class="hero-drop-name" title="${esc(d.drop)}">${esc(d.drop)}</span><span class="hero-drop-pct">${d.progress}%</span></div><div class="hero-progress-track hero-drop-track"><div class="hero-progress-fill hero-drop-fill" style="width:${d.progress}%;background:var(--v${d.colorIdx})"></div></div></div>`
+    )
+    .join("");
+
   const sections = dropKeys.map((drop, i) => {
     const features = buckets.get(drop) || [];
     const varIdx = (i % 4) + 1;
@@ -212,11 +373,22 @@ ${ROADMAP_CSS}
     <h1>${esc(boardName)}</h1>
     <p>Features grouped by drop, with nested sub-items (name and status only).</p>
     <p style="margin-top:10px;font-size:12px;opacity:.9">${opts.sourceLineHtml}</p>
-    <div class="stats">
-      <div class="stat"><div class="label">Total features</div><div class="value">${stats.uniqueCount}</div><div class="small">unique parent items</div></div>
-      <div class="stat"><div class="label">Completed</div><div class="value">${stats.doneCount}</div><div class="small">parent status = Done</div></div>
-      <div class="stat"><div class="label">Progress</div><div class="value">${stats.progress}%</div><div class="small">based on completed features</div></div>
-      <div class="stat"><div class="label">Drops</div><div class="value">${stats.dropCount}</div><div class="small">distinct drop labels</div></div>
+    <div class="hero-main-row">
+      <div class="hero-compact-stats">
+        <div class="hero-compact-stat"><div class="label">Total features</div><div class="value">${stats.uniqueCount}</div><div class="small">parent items</div></div>
+        <div class="hero-compact-stat"><div class="label">Completed</div><div class="value">${stats.doneCount}</div><div class="small">at 100%</div></div>
+      </div>
+      <div class="hero-progress-panel">
+        <div class="hero-overall-progress">
+          <div class="hero-overall-head">
+            <span class="hero-progress-label">Overall progress <span style="opacity:.75;font-weight:500">(weighted · cancelled excluded)</span></span>
+            <span class="hero-overall-pct">${stats.progress}%</span>
+          </div>
+          <div class="hero-progress-track"><div class="hero-progress-fill" style="width:${stats.progress}%"></div></div>
+        </div>
+        <div class="hero-drop-bars-head">Progress by drop · ${stats.dropCount} buckets</div>
+        <div class="hero-drop-bars" style="${dropBarsGridStyle}">${dropBarsHtml}</div>
+      </div>
     </div>
   </div>
   <div class="content">

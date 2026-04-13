@@ -10,7 +10,7 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
+import { computeSubitemWeightedProgress, dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BOARD_ID = process.env.MONDAY_BOARD_ID || "18396795757";
@@ -211,6 +211,8 @@ function buildFeatures(board) {
   const buckets = new Map();
   /** @type {Map<string, { status: string }>} */
   const idToParent = new Map();
+  /** @type {Map<string, { status: string, subitems: { status: string }[] }>} */
+  const progressByParentId = new Map();
 
   for (const group of board.groups || []) {
     const gFallback = groupTitleAsDrop(group.title);
@@ -221,7 +223,13 @@ function buildFeatures(board) {
 
       const parentStatus = parentItemStatus(item, board.columns);
       const name = item.name || "—";
-      if (!idToParent.has(item.id)) idToParent.set(item.id, { status: parentStatus });
+      if (!idToParent.has(item.id)) {
+        idToParent.set(item.id, { status: parentStatus });
+        progressByParentId.set(item.id, {
+          status: parentStatus,
+          subitems: (item.subitems || []).map((s) => ({ status: subitemStatus(s) })),
+        });
+      }
 
       for (const d of dropLabels) {
         if (!buckets.has(d)) buckets.set(d, []);
@@ -239,11 +247,8 @@ function buildFeatures(board) {
   const dropKeys = [...buckets.keys()].sort((a, b) => dropSortKey(a) - dropSortKey(b) || a.localeCompare(b));
 
   const uniqueCount = idToParent.size;
-  let doneCount = 0;
-  for (const f of idToParent.values()) {
-    if (String(f.status).toLowerCase() === "done") doneCount++;
-  }
-  const progress = uniqueCount ? Math.round((doneCount / uniqueCount) * 100) : 0;
+  const progressRows = [...progressByParentId.values()];
+  const { progress, doneCount } = computeSubitemWeightedProgress(progressRows);
 
   return {
     boardName: board.name || "Money roadmap",

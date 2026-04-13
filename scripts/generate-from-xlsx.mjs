@@ -17,7 +17,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import XLSX from "xlsx";
-import { dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
+import { computeSubitemWeightedProgress, dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -155,11 +155,10 @@ function buildModelFromParents(parents, boardName) {
   const dropKeys = [...buckets.keys()].sort((a, b) => dropSortKey(a) - dropSortKey(b) || a.localeCompare(b));
 
   const uniqueCount = idToParent.size;
-  let doneCount = 0;
-  for (const f of idToParent.values()) {
-    if (String(f.status).toLowerCase() === "done") doneCount++;
-  }
-  const progress = uniqueCount ? Math.round((doneCount / uniqueCount) * 100) : 0;
+  const progressRows = parents
+    .filter((p) => parentDropLabels(p.dropRaw).length > 0)
+    .map((p) => ({ status: p.status, subitems: p.subitems.map((s) => ({ status: s.status })) }));
+  const { progress, doneCount } = computeSubitemWeightedProgress(progressRows);
 
   return {
     boardName,
