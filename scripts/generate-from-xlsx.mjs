@@ -11,13 +11,20 @@
  *   BOARD_XLSX — path to .xlsx (default: data/board-export.xlsx)
  *   BOARD_TITLE — hero title (default: eToro Plus — Money Roadmap)
  *   MONDAY_XLS_* — optional 0-based column overrides (see README)
+ *   BOARD_EXCLUDED_PARENTS — optional extra | pipe-separated parent names to omit (see isExcludedRoadmapParentName defaults in roadmap-render.mjs)
  */
 
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import XLSX from "xlsx";
-import { computeSubitemWeightedProgress, dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
+import {
+  computeSubitemWeightedProgress,
+  dropSortKey,
+  esc,
+  isExcludedRoadmapParentName,
+  renderRoadmapHtml,
+} from "./roadmap-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -109,6 +116,10 @@ function parseMondayExportMatrix(matrix) {
     if (a !== "") {
       const pDrops = parentDropLabels(dropVal);
       if (pDrops.length === 0) {
+        current = null;
+        continue;
+      }
+      if (isExcludedRoadmapParentName(a)) {
         current = null;
         continue;
       }
@@ -213,7 +224,7 @@ function main() {
   const sheet = wb.Sheets[sheetName];
   const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
 
-  const parents = parseMondayExportMatrix(matrix);
+  const parents = parseMondayExportMatrix(matrix).filter((p) => !isExcludedRoadmapParentName(p.name));
   if (!parents.length) {
     console.error("No parent rows found. Check that the file is a Monday board export and column positions match (see README).");
     process.exit(1);

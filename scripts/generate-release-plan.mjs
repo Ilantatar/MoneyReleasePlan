@@ -10,7 +10,13 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { computeSubitemWeightedProgress, dropSortKey, esc, renderRoadmapHtml } from "./roadmap-render.mjs";
+import {
+  computeSubitemWeightedProgress,
+  dropSortKey,
+  esc,
+  isExcludedRoadmapParentName,
+  renderRoadmapHtml,
+} from "./roadmap-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BOARD_ID = process.env.MONDAY_BOARD_ID || "18396795757";
@@ -239,6 +245,7 @@ function buildFeatures(board) {
 
       const parentStatus = parentItemStatus(item, board.columns);
       const name = item.name || "—";
+      if (isExcludedRoadmapParentName(name)) continue;
       if (!idToParent.has(item.id)) {
         idToParent.set(item.id, { status: parentStatus });
         progressByParentId.set(item.id, {

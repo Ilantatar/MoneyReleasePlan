@@ -2,6 +2,27 @@
  * Shared CSS + HTML renderer for the roadmap index (API and XLSX pipelines).
  */
 
+/** Parent item names (Monday / Excel) to omit entirely, case-insensitive. Extra: env BOARD_EXCLUDED_PARENTS pipe-separated. */
+const DEFAULT_EXCLUDED_PARENT_NAMES = ["mvp - api /bff project"];
+
+function excludedRoadmapParentNameSet() {
+  const fromEnv = (typeof process !== "undefined" && process.env.BOARD_EXCLUDED_PARENTS
+    ? process.env.BOARD_EXCLUDED_PARENTS.split("|")
+    : []
+  )
+    .map((s) => s.trim().toLowerCase().replace(/\s+/g, " "))
+    .filter(Boolean);
+  return new Set([...DEFAULT_EXCLUDED_PARENT_NAMES, ...fromEnv]);
+}
+
+const EXCLUDED_ROADMAP_PARENT_NAMES = excludedRoadmapParentNameSet();
+
+/** @param {string} name Parent feature name */
+export function isExcludedRoadmapParentName(name) {
+  const n = String(name).trim().toLowerCase().replace(/\s+/g, " ");
+  return EXCLUDED_ROADMAP_PARENT_NAMES.has(n);
+}
+
 export const ROADMAP_CSS = `  :root {
     --bg: #eef2f8;
     --panel: rgba(255,255,255,.78);
