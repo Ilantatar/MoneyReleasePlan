@@ -4,7 +4,7 @@
  * Layout matches Generate_Release_Plan_Html.ps1 / typical eToro Plus Money export:
  * - Skip first 3 sheet rows; parent name in column A; subitems: A blank, name in B, status in D.
  * - Parent status column C, Drop column H (0-based: 2 and 7).
- * - Subitem Drop column F (0-based: 5); column E is often JIRA — subitems match bucket, or empty (all parent buckets), or no overlap with parent drops (show under all parent buckets).
+ * - Subitem Drop column F (0-based: 5); column E is often JIRA. Parent also appears in extra columns for sub-only drops (e.g. parent V2/V3, sub V1 → row under V1 with that sub only).
  * - Parents with no Drop are omitted; subitems under a skipped parent are ignored.
  *
  * Env:
@@ -63,6 +63,23 @@ function parentDropLabels(dropRaw) {
   return [...new Set(splitDrops(dropRaw))];
 }
 
+/** Sub-item drop labels that are not on the parent (e.g. sub on V1 while parent is V2/V3). */
+function orphanSubDropLabelsFromParent(p) {
+  const parentSet = new Set(parentDropLabels(p.dropRaw));
+  const out = new Set();
+  for (const s of p.subitems || []) {
+    for (const d of splitDrops(s.dropRaw)) {
+      if (d && !parentSet.has(d)) out.add(d);
+    }
+  }
+  return [...out];
+}
+
+/** Columns where this parent appears: parent drops plus any orphan sub-only drops. */
+function placementDropsForParent(p) {
+  return [...new Set([...parentDropLabels(p.dropRaw), ...orphanSubDropLabelsFromParent(p)])];
+}
+
 /**
  * Parse sheet matrix using the same row rules as Generate_Release_Plan_Html.ps1.
  */
@@ -117,12 +134,17 @@ function parseMondayExportMatrix(matrix) {
   return parents;
 }
 
-/** Subitem appears in bucket `bucketKey` if it has no sub-Drop, or sub-Drop matches bucket, or sub-Drop shares no label with the parent (data mismatch: show under every parent bucket). */
+/**
+ * Subitems for column `bucketKey`. `parentDropKeys` = drops on the parent row only.
+ * - If `bucketKey` is an extra column (sub-only drop): only subs explicitly tagged `bucketKey`.
+ * - If `bucketKey` is on the parent: same as before (empty sub-drop → all; overlap → filter; no overlap → all parent columns).
+ */
 function subitemsForBucket(parentDropKeys, subitems, bucketKey) {
+  const inParent = parentDropKeys.includes(bucketKey);
   return subitems
     .filter((s) => {
       const sd = [...new Set(splitDrops(s.dropRaw))];
-      if (!parentDropKeys.includes(bucketKey)) return false;
+      if (!inParent) return sd.includes(bucketKey);
       if (sd.length === 0) return true;
       const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
       if (!overlapsParent) return true;
@@ -143,7 +165,7 @@ function buildModelFromParents(parents, boardName) {
 
     if (!idToParent.has(p.id)) idToParent.set(p.id, { status: p.status });
 
-    for (const d of dropLabels) {
+    for (const d of placementDropsForParent(p)) {
       if (!buckets.has(d)) buckets.set(d, []);
       const subFiltered = subitemsForBucket(dropLabels, p.subitems, d);
       buckets.get(d).push({

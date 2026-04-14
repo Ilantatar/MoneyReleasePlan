@@ -164,12 +164,25 @@ function parentDropLabelsFromItem(item, dropColId, groupTitleFallback) {
   return [...new Set((raw || []).filter((d) => d && String(d).trim() && d !== "Unassigned"))];
 }
 
-/** Subitem shown in bucket when no sub-Drop, or sub-Drop matches, or sub-Drop overlaps none of the parent's drops (show under every parent bucket). */
+/** Sub-item drops that are not on the parent (parent row vs sub row mismatch). */
+function orphanSubDropLabelsFromItem(item, dropColId, parentDropKeys) {
+  const parentSet = new Set(parentDropKeys);
+  const out = new Set();
+  for (const sub of item.subitems || []) {
+    for (const d of parentDropLabelsFromItem(sub, dropColId, null)) {
+      if (d && !parentSet.has(d)) out.add(d);
+    }
+  }
+  return [...out];
+}
+
+/** Subitem in column bucketKey; parentDropKeys = parent's drops only. Extra columns (sub-only drops): subs tagged bucketKey only. */
 function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId) {
+  const inParent = parentDropKeys.includes(bucketKey);
   return (subitems || [])
     .filter((sub) => {
       const sd = parentDropLabelsFromItem(sub, dropColId, null);
-      if (!parentDropKeys.includes(bucketKey)) return false;
+      if (!inParent) return sd.includes(bucketKey);
       if (sd.length === 0) return true;
       const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
       if (!overlapsParent) return true;
@@ -234,7 +247,8 @@ function buildFeatures(board) {
         });
       }
 
-      for (const d of dropLabels) {
+      const placementDrops = [...new Set([...dropLabels, ...orphanSubDropLabelsFromItem(item, dropColId, dropLabels)])];
+      for (const d of placementDrops) {
         if (!buckets.has(d)) buckets.set(d, []);
         const subFiltered = subitemsForBucketFromApi(item.subitems, d, dropLabels, dropColId);
         buckets.get(d).push({
