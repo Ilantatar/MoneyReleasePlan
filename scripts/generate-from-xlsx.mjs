@@ -147,8 +147,10 @@ function parseMondayExportMatrix(matrix) {
 
 /**
  * Subitems for column `bucketKey`. `parentDropKeys` = drops on the parent row only.
- * - If `bucketKey` is an extra column (sub-only drop): only subs explicitly tagged `bucketKey`.
- * - If `bucketKey` is on the parent: same as before (empty sub-drop → all; overlap → filter; no overlap → all parent columns).
+ * - Extension column (!inParent): only subs whose sub-Drop includes `bucketKey`.
+ * - Parent column + empty sub-Drop: show in every parent column.
+ * - Parent column + sub-Drop overlaps parent: show only where sub-Drop matches `bucketKey`.
+ * - Parent column + sub-Drop does not overlap parent: omit (those subs use extension columns only).
  */
 function subitemsForBucket(parentDropKeys, subitems, bucketKey) {
   const inParent = parentDropKeys.includes(bucketKey);
@@ -158,7 +160,7 @@ function subitemsForBucket(parentDropKeys, subitems, bucketKey) {
       if (!inParent) return sd.includes(bucketKey);
       if (sd.length === 0) return true;
       const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
-      if (!overlapsParent) return true;
+      if (!overlapsParent) return false;
       return sd.includes(bucketKey);
     })
     .map((s) => ({ name: s.name, status: s.status }));

@@ -11,4 +11,4 @@
 
 If your export uses different column positions than the default Monday layout for this board, set env vars (see main README): `MONDAY_XLS_COL_PARENT_NAME`, `MONDAY_XLS_COL_SUB_NAME`, `MONDAY_XLS_COL_PARENT_STATUS`, `MONDAY_XLS_COL_SUB_STATUS`, `MONDAY_XLS_COL_SUB_DROP` (subitem **Drop**, default column **F** / index **5**; **E** is often JIRA), `MONDAY_XLS_COL_DROP` (all **0-based**).
 
-Parents with an **empty Drop** are skipped. Under each drop column: subitems follow parent/sub-Drop rules. If a sub-item’s Drop is **not** on the parent, the parent row is also listed under that sub-only drop (e.g. parent V2+V3, two subs V1 → those subs appear under **V1** in their own column as well as under V2/V3).
+Parents with an **empty Drop** are skipped. Sub-items with a Drop that **matches** the column appear there; empty sub-Drop repeats under every **parent** drop. If a sub’s Drop **does not overlap** the parent’s drops, it appears **only** under extension columns for those sub-drops (e.g. parent V2+V3, sub V1 → that sub only under **V1**, not under V2/V3). The parent row is listed under sub-only drops when needed so those subs have a place to render.

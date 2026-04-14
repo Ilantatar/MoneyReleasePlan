@@ -182,7 +182,7 @@ function orphanSubDropLabelsFromItem(item, dropColId, parentDropKeys) {
   return [...out];
 }
 
-/** Subitem in column bucketKey; parentDropKeys = parent's drops only. Extra columns (sub-only drops): subs tagged bucketKey only. */
+/** Subitem in column bucketKey; parentDropKeys = parent's drops only. Orphan sub-drops (no overlap with parent) appear only on extension columns. */
 function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId) {
   const inParent = parentDropKeys.includes(bucketKey);
   return (subitems || [])
@@ -191,7 +191,7 @@ function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId
       if (!inParent) return sd.includes(bucketKey);
       if (sd.length === 0) return true;
       const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
-      if (!overlapsParent) return true;
+      if (!overlapsParent) return false;
       return sd.includes(bucketKey);
     })
     .map((s) => ({
