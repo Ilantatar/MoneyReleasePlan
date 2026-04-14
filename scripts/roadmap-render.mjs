@@ -2,8 +2,16 @@
  * Shared CSS + HTML renderer for the roadmap index (API and XLSX pipelines).
  */
 
-/** Parent item names (Monday / Excel) to omit entirely, case-insensitive. Extra: env BOARD_EXCLUDED_PARENTS pipe-separated. */
-const DEFAULT_EXCLUDED_PARENT_NAMES = ["mvp - api /bff project"];
+/**
+ * Parent item names (Monday / Excel) to omit entirely, case-insensitive.
+ * Includes children of "MVP - API /BFF project" that export as top-level rows.
+ * Extra: env BOARD_EXCLUDED_PARENTS pipe-separated.
+ */
+const DEFAULT_EXCLUDED_PARENT_NAMES = [
+  "mvp - api /bff project",
+  "real time balance & equity apis- hagit",
+  "deposit apis (using existing) +payment eligibility +funding",
+];
 
 function excludedRoadmapParentNameSet() {
   const fromEnv = (typeof process !== "undefined" && process.env.BOARD_EXCLUDED_PARENTS
