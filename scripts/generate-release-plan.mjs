@@ -164,12 +164,15 @@ function parentDropLabelsFromItem(item, dropColId, groupTitleFallback) {
   return [...new Set((raw || []).filter((d) => d && String(d).trim() && d !== "Unassigned"))];
 }
 
-/** Subitem shown in bucket when its Drop matches, or subitem has no Drop and parent is in that bucket. */
+/** Subitem shown in bucket when no sub-Drop, or sub-Drop matches, or sub-Drop overlaps none of the parent's drops (show under every parent bucket). */
 function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId) {
   return (subitems || [])
     .filter((sub) => {
       const sd = parentDropLabelsFromItem(sub, dropColId, null);
-      if (sd.length === 0) return parentDropKeys.includes(bucketKey);
+      if (!parentDropKeys.includes(bucketKey)) return false;
+      if (sd.length === 0) return true;
+      const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
+      if (!overlapsParent) return true;
       return sd.includes(bucketKey);
     })
     .map((s) => ({

@@ -4,7 +4,7 @@
  * Layout matches Generate_Release_Plan_Html.ps1 / typical eToro Plus Money export:
  * - Skip first 3 sheet rows; parent name in column A; subitems: A blank, name in B, status in D.
  * - Parent status column C, Drop column H (0-based: 2 and 7).
- * - Subitem Drop column F (0-based: 5); column E is often JIRA — subitems shown only under matching drop buckets.
+ * - Subitem Drop column F (0-based: 5); column E is often JIRA — subitems match bucket, or empty (all parent buckets), or no overlap with parent drops (show under all parent buckets).
  * - Parents with no Drop are omitted; subitems under a skipped parent are ignored.
  *
  * Env:
@@ -117,12 +117,15 @@ function parseMondayExportMatrix(matrix) {
   return parents;
 }
 
-/** Subitem appears in bucket `bucketKey` if its Drop matches, or it has no sub-Drop and parent is in that bucket. */
+/** Subitem appears in bucket `bucketKey` if it has no sub-Drop, or sub-Drop matches bucket, or sub-Drop shares no label with the parent (data mismatch: show under every parent bucket). */
 function subitemsForBucket(parentDropKeys, subitems, bucketKey) {
   return subitems
     .filter((s) => {
       const sd = [...new Set(splitDrops(s.dropRaw))];
-      if (sd.length === 0) return parentDropKeys.includes(bucketKey);
+      if (!parentDropKeys.includes(bucketKey)) return false;
+      if (sd.length === 0) return true;
+      const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
+      if (!overlapsParent) return true;
       return sd.includes(bucketKey);
     })
     .map((s) => ({ name: s.name, status: s.status }));
