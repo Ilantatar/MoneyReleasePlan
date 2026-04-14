@@ -260,7 +260,7 @@ export function dropSortKey(label) {
 
 /**
  * Maps a status label to a progress percent, or `null` if excluded from averages (cancelled).
- * Rules: Done/deployment 100%; QA 85%; development (incl. Dev WIP / FE dev) 60%; groomed/grooming 25%; cancelled omitted.
+ * Rules: Done 100%; Deployment 95%; QA 85%; development (incl. Dev WIP / FE dev) 60%; groomed/grooming 25%; cancelled omitted.
  */
 export function statusProgressPercent(raw) {
   const s = String(raw ?? "")
@@ -269,7 +269,7 @@ export function statusProgressPercent(raw) {
   if (!s || s === "—") return 0;
   if (s.includes("cancel")) return null;
 
-  if (s.includes("deployment")) return 100;
+  if (s.includes("deployment")) return 95;
   if (s === "done") return 100;
   if (/\bdone\b/.test(s) && !s.includes("not done") && !s.includes("wip")) return 100;
 
