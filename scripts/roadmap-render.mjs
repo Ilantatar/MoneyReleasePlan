@@ -42,6 +42,7 @@ export const ROADMAP_CSS = `  :root {
     --v2: #8c63ff;
     --v3: #3bbf74;
     --v4: #f2a34d;
+    --v5: #0d9488;
   }
   * { box-sizing: border-box; }
   body {
@@ -329,7 +330,7 @@ export function computePerDropProgress(dropKeys, buckets) {
       subitems: (f.subitems || []).map((s) => ({ status: s.status })),
     }));
     const { progress } = computeSubitemWeightedProgress(rows);
-    return { drop, progress, colorIdx: (i % 4) + 1 };
+    return { drop, progress, colorIdx: (i % 5) + 1 };
   });
 }
 
@@ -359,13 +360,13 @@ export function renderRoadmapHtml(model, opts) {
   const { boardName, dropKeys, buckets, stats } = model;
   const generatedAt = new Date().toISOString();
   const gridStyle =
-    dropKeys.length <= 4
+    dropKeys.length <= 5
       ? `grid-template-columns: repeat(${Math.max(dropKeys.length, 1)}, minmax(0, 1fr));`
       : "grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));";
 
   const perDrop = computePerDropProgress(dropKeys, buckets);
   const dropBarsGridStyle =
-    dropKeys.length <= 4
+    dropKeys.length <= 5
       ? `grid-template-columns: repeat(${Math.max(dropKeys.length, 1)}, minmax(0, 1fr));`
       : "grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));";
   const dropBarsHtml = perDrop
@@ -376,7 +377,7 @@ export function renderRoadmapHtml(model, opts) {
 
   const sections = dropKeys.map((drop, i) => {
     const features = buckets.get(drop) || [];
-    const varIdx = (i % 4) + 1;
+    const varIdx = (i % 5) + 1;
     const featuresHtml = features.map(renderFeature).join("");
     return `<section class="drop" style="border-top: 5px solid var(--v${varIdx});"><div class="drop-head"><div><h2>${esc(drop)}</h2><div class="sub">Release bucket</div></div><div class="count">${features.length} features</div></div><div class="drop-body">${featuresHtml}</div></section>`;
   });
