@@ -31,6 +31,27 @@ export function isExcludedRoadmapParentName(name) {
   return EXCLUDED_ROADMAP_PARENT_NAMES.has(n);
 }
 
+/** Normalize parent title for domain checks (lowercase, single spaces). */
+function normParentTitle(name) {
+  return String(name ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Parent items counted under the Payments domain on the Money roadmap
+ * (Monday parent names). Used for the on-page “Payments only” filter.
+ */
+export function isPaymentsDomainParentName(name) {
+  const n = normParentTitle(name);
+  if (n === "account cashflow") return true;
+  if (n === "deposit mops") return true;
+  if (n === "settings") return true;
+  if (/\bflow\s*[-–]\s*deposit\b/.test(n)) return true;
+  return false;
+}
+
 export const ROADMAP_CSS = `  :root {
     --bg: #eef2f8;
     --panel: rgba(255,255,255,.78);
@@ -219,6 +240,30 @@ export const ROADMAP_CSS = `  :root {
   .submeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
   .submeta-pill { font-size: 11px; color: #4b5563; background: rgba(255,255,255,.9); border: 1px solid rgba(148,163,184,.16); border-radius: 999px; padding: 5px 8px; }
   .hint { margin-top: 10px; color: var(--muted); font-size: 12px; }
+  .domain-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  .domain-filter label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .domain-filter select {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 7px 28px 7px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,.35);
+    background: rgba(255,255,255,.95) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 8l3-3.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+    box-shadow: var(--shadow);
+    appearance: none;
+    cursor: pointer;
+    min-width: 160px;
+  }
+  .legend.legend-with-filter { align-items: center; }
+  body.roadmap-filter-payments .feature[data-payments="0"] { display: none !important; }
   @media (max-width: 1180px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .hero-drop-bars { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
   @media (max-width: 720px) {
     .grid, .meta-grid { grid-template-columns: 1fr; }
@@ -335,6 +380,7 @@ export function computePerDropProgress(dropKeys, buckets) {
 }
 
 export function renderFeature(f) {
+  const payAttr = isPaymentsDomainParentName(f.name) ? "1" : "0";
   const badge = `<span class="badge ${statusBadgeClass(f.status)}">${esc(f.status)}</span>`;
   const title = esc(f.name);
   const hasSubs = f.subitems.length > 0;
@@ -347,9 +393,9 @@ export function renderFeature(f) {
     : "";
 
   if (hasSubs) {
-    return `<details class="feature feature-expandable"><summary><span class="feature-title-row"><span class="feature-chevron" aria-hidden="true">›</span><span class="feature-title">${title}</span></span>${badge}</summary>${subBlock}</details>`;
+    return `<details class="feature feature-expandable" data-payments="${payAttr}"><summary><span class="feature-title-row"><span class="feature-chevron" aria-hidden="true">›</span><span class="feature-title">${title}</span></span>${badge}</summary>${subBlock}</details>`;
   }
-  return `<div class="feature feature-leaf"><div class="feature-summary"><span class="feature-title-row"><span class="feature-chevron-spacer" aria-hidden="true"></span><span class="feature-title">${title}</span></span>${badge}</div></div>`;
+  return `<div class="feature feature-leaf" data-payments="${payAttr}"><div class="feature-summary"><span class="feature-title-row"><span class="feature-chevron-spacer" aria-hidden="true"></span><span class="feature-title">${title}</span></span>${badge}</div></div>`;
 }
 
 /**
@@ -379,7 +425,7 @@ export function renderRoadmapHtml(model, opts) {
     const features = buckets.get(drop) || [];
     const varIdx = (i % 5) + 1;
     const featuresHtml = features.map(renderFeature).join("");
-    return `<section class="drop" style="border-top: 5px solid var(--v${varIdx});"><div class="drop-head"><div><h2>${esc(drop)}</h2><div class="sub">Release bucket</div></div><div class="count">${features.length} features</div></div><div class="drop-body">${featuresHtml}</div></section>`;
+    return `<section class="drop" data-total-features="${features.length}" style="border-top: 5px solid var(--v${varIdx});"><div class="drop-head"><div><h2>${esc(drop)}</h2><div class="sub">Release bucket</div></div><div class="count">${features.length} features</div></div><div class="drop-body">${featuresHtml}</div></section>`;
   });
 
   const desc = opts.metaDescription || "Interactive roadmap grouped by release drop with nested sub-items.";
@@ -422,9 +468,16 @@ ${ROADMAP_CSS}
     </div>
   </div>
   <div class="content">
-    <div class="legend">
+    <div class="legend legend-with-filter">
       <span class="pill">Multi-drop features appear in every relevant drop bucket.</span>
       <span class="pill">Sub-items show name and status only.</span>
+      <div class="domain-filter">
+        <label for="roadmap-domain-filter">View</label>
+        <select id="roadmap-domain-filter" aria-label="Filter roadmap by domain">
+          <option value="all">All domains</option>
+          <option value="payments">Payments only</option>
+        </select>
+      </div>
     </div>
     <div class="grid">
 ${sections.join("\n")}
@@ -432,6 +485,49 @@ ${sections.join("\n")}
   </div>
 </div>
 <!-- generated-at: ${esc(generatedAt)} -->
+<script>
+(function () {
+  var sel = document.getElementById("roadmap-domain-filter");
+  if (!sel) return;
+  function paymentsOnly() {
+    return sel.value === "payments";
+  }
+  function apply() {
+    var on = paymentsOnly();
+    document.body.classList.toggle("roadmap-filter-payments", on);
+    document.querySelectorAll("section.drop").forEach(function (sec) {
+      var total = parseInt(sec.getAttribute("data-total-features") || "0", 10) || 0;
+      var body = sec.querySelector(".drop-body");
+      var cnt = sec.querySelector(".drop-head .count");
+      if (!body || !cnt) return;
+      if (on) {
+        var n = body.querySelectorAll('.feature[data-payments="1"]').length;
+        sec.hidden = n === 0;
+        cnt.textContent = n + (n === 1 ? " feature" : " features");
+      } else {
+        sec.hidden = false;
+        cnt.textContent = total + (total === 1 ? " feature" : " features");
+      }
+    });
+    try {
+      var u = new URL(window.location.href);
+      if (on) u.searchParams.set("domain", "payments");
+      else u.searchParams.delete("domain");
+      window.history.replaceState({}, "", u.pathname + u.search + u.hash);
+    } catch (e) {}
+  }
+  sel.addEventListener("change", apply);
+  function initFromUrl() {
+    try {
+      var q = new URLSearchParams(window.location.search).get("domain");
+      if (q === "payments") sel.value = "payments";
+    } catch (e) {}
+    apply();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initFromUrl);
+  else initFromUrl();
+})();
+</script>
 </body>
 </html>
 `;
