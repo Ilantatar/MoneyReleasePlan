@@ -75,9 +75,11 @@ If your board uses different titles, adjust `findDropColumn` / `findParentStatus
 
 ## GitHub Pages
 
-1. Repo **Settings → Pages**: source **Deploy from a branch**, branch **`main`**, folder **`/` (root)**.
-2. **Organization repos:** site URL is usually `https://<org>.github.io/<repo>/` — for example **`https://eToro.github.io/MoneyReleasePlan/`** once Pages is enabled (exact URL appears on the Pages settings screen).
-3. **Private repos:** GitHub Pages for private repositories may require **GitHub Enterprise** or org policy allowing internal Pages; if disabled, use an org-approved host (e.g. internal static hosting) or make the repo **public** if policy allows.
+**Canonical site for sharing (same `index.html` as this repo’s `main`):** **[https://ilantatar.github.io/MoneyReleasePlan/](https://ilantatar.github.io/MoneyReleasePlan/)** — built from the user-owned fork **[Ilantatar/MoneyReleasePlan](https://github.com/Ilantatar/MoneyReleasePlan)** so the URL stays stable for the team. An org copy may also exist (for example `https://eToro.github.io/MoneyReleasePlan/`); use whichever your org can open in the browser.
+
+1. On the repo that should serve the site: **Settings → Pages** → source **Deploy from a branch**, branch **`main`**, folder **`/` (root)**. Wait for the green Pages build; then hard-refresh (**Ctrl+F5**) if the page looks old.
+2. **Who can open the page:** for **`*.github.io/<repo>/`** with a **public** repo, anyone with the link can view it (no GitHub login). If the repo is **private**, GitHub may block public Pages unless your org enables **GitHub Enterprise** internal Pages; in that case either keep the fork **public** for this roadmap or add colleagues as **collaborators** / via org policy so they can reach the org repo’s Pages URL.
+3. **Actions on a fork:** if workflows do not run after push, enable **Actions** for the fork once under **Settings → Actions → General** (forks sometimes default to disabled).
 
 Keep **`.nojekyll`** in the root so Pages serves the site as static files.
 
