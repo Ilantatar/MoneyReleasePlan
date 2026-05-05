@@ -305,8 +305,9 @@ export function dropSortKey(label) {
 }
 
 /**
- * Maps a status label to a progress percent, or `null` if excluded from averages (cancelled).
- * Rules: Done 100%; Deployment 95%; QA 85%; development (incl. Dev WIP / FE dev) 60%; groomed/grooming 25%; cancelled omitted.
+ * Maps a status label to a progress percent, or `null` if excluded from averages.
+ * Excluded: cancelled; “Handled by other team” (and common spelling variants) — same as omitted from progress averages.
+ * Rules: Done 100%; Deployment 95%; QA 85%; development (incl. Dev WIP / FE dev) 60%; groomed/grooming 25%.
  */
 export function statusProgressPercent(raw) {
   const s = String(raw ?? "")
@@ -314,6 +315,7 @@ export function statusProgressPercent(raw) {
     .trim();
   if (!s || s === "—") return 0;
   if (s.includes("cancel")) return null;
+  if (/handle(?:d)?\s+by\s+other\s+team/i.test(s)) return null;
 
   if (s.includes("deployment")) return 95;
   if (s === "done") return 100;
@@ -330,7 +332,7 @@ export function statusProgressPercent(raw) {
 
 /**
  * Parent badge shown in drop column `bucketKey`: if this bucket lists sub-items and every
- * non-cancelled sub-item is Done (100% progress), show Done here even when other drops still have open work.
+ * counted sub-item (excludes cancelled / handled-by-other-team) is Done (100% progress), show Done here even when other drops still have open work.
  * Empty bucket → keeps Monday parent status (leaf / no subs in column).
  */
 export function deriveParentStatusForBucket(parentStatus, subitemsInBucket) {
@@ -350,8 +352,8 @@ export function deriveParentStatusForBucket(parentStatus, subitemsInBucket) {
 }
 
 /**
- * Weighted progress from unique parent rows: each non-cancelled sub-item counts once;
- * parents with no countable sub-items use parent status. Cancelled sub-items are skipped.
+ * Weighted progress from unique parent rows: each sub-item with a finite progress weight counts once;
+ * parents with no countable sub-items use parent status. Cancelled and “handled by other team” sub-items are skipped.
  * @param parentRows {Array<{ status: string, subitems?: { status: string }[] }>}
  */
 export function computeSubitemWeightedProgress(parentRows) {
