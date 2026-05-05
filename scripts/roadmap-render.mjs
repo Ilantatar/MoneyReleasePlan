@@ -329,6 +329,27 @@ export function statusProgressPercent(raw) {
 }
 
 /**
+ * Parent badge shown in drop column `bucketKey`: if this bucket lists sub-items and every
+ * non-cancelled sub-item is Done (100% progress), show Done here even when other drops still have open work.
+ * Empty bucket → keeps Monday parent status (leaf / no subs in column).
+ */
+export function deriveParentStatusForBucket(parentStatus, subitemsInBucket) {
+  const subs = subitemsInBucket || [];
+  if (subs.length === 0) return parentStatus;
+
+  const weights = subs.map((s) => statusProgressPercent(s.status)).filter((w) => w !== null);
+  if (weights.length === 0) return parentStatus;
+
+  if (weights.every((w) => w >= 100)) return "Done";
+
+  const ps = String(parentStatus ?? "").toLowerCase();
+  const parentLooksDone = (ps === "done" || (/\bdone\b/.test(ps) && !ps.includes("not done") && !ps.includes("wip"))) && !ps.includes("cancel");
+  if (parentLooksDone) return "In progress";
+
+  return parentStatus;
+}
+
+/**
  * Weighted progress from unique parent rows: each non-cancelled sub-item counts once;
  * parents with no countable sub-items use parent status. Cancelled sub-items are skipped.
  * @param parentRows {Array<{ status: string, subitems?: { status: string }[] }>}

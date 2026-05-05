@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   computeSubitemWeightedProgress,
+  deriveParentStatusForBucket,
   dropSortKey,
   esc,
   isExcludedRoadmapParentName,
@@ -261,7 +262,7 @@ function buildFeatures(board) {
         buckets.get(d).push({
           id: item.id,
           name,
-          status: parentStatus,
+          status: deriveParentStatusForBucket(parentStatus, subFiltered),
           subitems: subFiltered,
         });
       }

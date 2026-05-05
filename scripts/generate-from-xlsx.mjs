@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import XLSX from "xlsx";
 import {
   computeSubitemWeightedProgress,
+  deriveParentStatusForBucket,
   dropSortKey,
   esc,
   isExcludedRoadmapParentName,
@@ -184,7 +185,7 @@ function buildModelFromParents(parents, boardName) {
       buckets.get(d).push({
         id: p.id,
         name: p.name,
-        status: p.status,
+        status: deriveParentStatusForBucket(p.status, subFiltered),
         subitems: subFiltered,
       });
     }
