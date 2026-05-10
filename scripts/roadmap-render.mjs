@@ -330,6 +330,11 @@ export function statusProgressPercent(raw) {
   return 0;
 }
 
+/** Cancelled and “handled by other team” — omitted from the roadmap UI (same as `statusProgressPercent` → null). */
+export function isHiddenRoadmapStatus(raw) {
+  return statusProgressPercent(raw) === null;
+}
+
 /**
  * Parent badge shown in drop column `bucketKey`: if this bucket lists sub-items and every
  * counted sub-item (excludes cancelled / handled-by-other-team) is Done (100% progress), show Done here even when other drops still have open work.

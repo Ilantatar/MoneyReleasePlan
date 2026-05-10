@@ -24,6 +24,7 @@ import {
   dropSortKey,
   esc,
   isExcludedRoadmapParentName,
+  isHiddenRoadmapStatus,
   renderRoadmapHtml,
 } from "./roadmap-render.mjs";
 
@@ -174,14 +175,17 @@ function buildModelFromParents(parents, boardName) {
   const idToParent = new Map();
 
   for (const p of parents) {
+    if (isHiddenRoadmapStatus(p.status)) continue;
     const dropLabels = parentDropLabels(p.dropRaw);
     if (dropLabels.length === 0) continue;
 
     if (!idToParent.has(p.id)) idToParent.set(p.id, { status: p.status });
 
     for (const d of placementDropsForParent(p)) {
+      const inParentColumn = dropLabels.includes(d);
+      const subFiltered = subitemsForBucket(dropLabels, p.subitems, d).filter((s) => !isHiddenRoadmapStatus(s.status));
+      if (subFiltered.length === 0 && !inParentColumn) continue;
       if (!buckets.has(d)) buckets.set(d, []);
-      const subFiltered = subitemsForBucket(dropLabels, p.subitems, d);
       buckets.get(d).push({
         id: p.id,
         name: p.name,
@@ -195,8 +199,11 @@ function buildModelFromParents(parents, boardName) {
 
   const uniqueCount = idToParent.size;
   const progressRows = parents
-    .filter((p) => parentDropLabels(p.dropRaw).length > 0)
-    .map((p) => ({ status: p.status, subitems: p.subitems.map((s) => ({ status: s.status })) }));
+    .filter((p) => parentDropLabels(p.dropRaw).length > 0 && !isHiddenRoadmapStatus(p.status))
+    .map((p) => ({
+      status: p.status,
+      subitems: p.subitems.filter((s) => !isHiddenRoadmapStatus(s.status)).map((s) => ({ status: s.status })),
+    }));
   const { progress, doneCount } = computeSubitemWeightedProgress(progressRows);
 
   return {

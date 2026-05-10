@@ -16,6 +16,7 @@ import {
   dropSortKey,
   esc,
   isExcludedRoadmapParentName,
+  isHiddenRoadmapStatus,
   renderRoadmapHtml,
 } from "./roadmap-render.mjs";
 
@@ -247,18 +248,25 @@ function buildFeatures(board) {
       const parentStatus = parentItemStatus(item, board.columns);
       const name = item.name || "—";
       if (isExcludedRoadmapParentName(name)) continue;
+      if (isHiddenRoadmapStatus(parentStatus)) continue;
       if (!idToParent.has(item.id)) {
         idToParent.set(item.id, { status: parentStatus });
         progressByParentId.set(item.id, {
           status: parentStatus,
-          subitems: (item.subitems || []).map((s) => ({ status: subitemStatus(s) })),
+          subitems: (item.subitems || [])
+            .filter((s) => !isHiddenRoadmapStatus(subitemStatus(s)))
+            .map((s) => ({ status: subitemStatus(s) })),
         });
       }
 
       const placementDrops = [...new Set([...dropLabels, ...orphanSubDropLabelsFromItem(item, dropColId, dropLabels)])];
       for (const d of placementDrops) {
+        const inParentColumn = dropLabels.includes(d);
+        const subFiltered = subitemsForBucketFromApi(item.subitems, d, dropLabels, dropColId).filter(
+          (s) => !isHiddenRoadmapStatus(s.status)
+        );
+        if (subFiltered.length === 0 && !inParentColumn) continue;
         if (!buckets.has(d)) buckets.set(d, []);
-        const subFiltered = subitemsForBucketFromApi(item.subitems, d, dropLabels, dropColId);
         buckets.get(d).push({
           id: item.id,
           name,
