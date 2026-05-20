@@ -60,7 +60,7 @@ export const ROADMAP_CSS = `  :root {
     --muted: #6b7280;
     --shadow: 0 12px 30px rgba(31,41,55,.08);
     --v1: #4f7cff;
-    --v2: #8c63ff;
+    --v2: #f08080;
     --v3: #3bbf74;
     --v4: #f2a34d;
     --v5: #0d9488;
