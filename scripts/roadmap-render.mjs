@@ -155,10 +155,10 @@ export const ROADMAP_CSS = `  :root {
   .hero-drop-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hero-drop-pct { font-weight: 800; flex-shrink: 0; }
   .hero-progress-track {
-    height: 10px; border-radius: 999px; background: rgba(255,255,255,.22);
+    height: 20px; border-radius: 999px; background: rgba(255,255,255,.22);
     overflow: hidden; border: 1px solid rgba(255,255,255,.2);
   }
-  .hero-progress-track.hero-drop-track { height: 8px; }
+  .hero-progress-track.hero-drop-track { height: 16px; }
   .hero-progress-fill {
     height: 100%; border-radius: 999px;
     background: rgba(255,255,255,.92);
