@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       board_id:
-        description: Monday board ID
+        description: Monday board ID (eToro Plus- Money)
         required: false
         default: "18396795757"
         type: string
   schedule:
+    # Weekly refresh — Mondays 06:00 UTC
     - cron: "0 6 * * 1"
 
 concurrency:
@@ -21,18 +22,30 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    env:
+      MONDAY_BOARD_ID: ${{ github.event.inputs.board_id || '18396795757' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Generate index.html from Monday
+      - name: Require Monday API token
+        run: |
+          if [ -z "${{ secrets.MONDAY_API_TOKEN }}" ]; then
+            echo "::error::Add repository secret MONDAY_API_TOKEN (Monday → Profile → Developers → API token). See README."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate index.html from Monday API
         env:
           MONDAY_API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
-          MONDAY_BOARD_ID: ${{ github.event.inputs.board_id || '18396795757' }}
-        run: node scripts/generate-release-plan.mjs
+        run: npm run generate:monday
 
       - name: Commit if changed
         run: |

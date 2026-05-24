@@ -3,11 +3,15 @@
  * (release plan: columns by Drop, parent status, subitems = name + status only).
  *
  * Env:
- *   MONDAY_API_TOKEN — required (Monday API token; use value shown in Monday admin)
- *   MONDAY_BOARD_ID — optional, default 18396795757
+ *   MONDAY_API_TOKEN — Monday API token (Profile → Developers). Required unless MONDAY_BOARD_JSON is set.
+ *   MONDAY_BOARD_ID — optional, default 18396795757 (eToro Plus- Money)
+ *   MONDAY_BOARD_JSON — path to a saved API response (data.boards[] or boards[]) for offline/Cursor MCP runs
+ *   MONDAY_SAVE_SNAPSHOT — if "1"/"true", save API response to data/monday-board-snapshot.json after fetch;
+ *                         or set to a custom file path
+ *   BOARD_TITLE — optional hero title override (default: Monday board name)
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -23,6 +27,66 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BOARD_ID = process.env.MONDAY_BOARD_ID || "18396795757";
 const TOKEN = process.env.MONDAY_API_TOKEN;
+const DEFAULT_SNAPSHOT = join(ROOT, "data", "monday-board-snapshot.json");
+
+function snapshotWritePath() {
+  const v = process.env.MONDAY_SAVE_SNAPSHOT;
+  if (!v) return null;
+  if (v === "1" || v.toLowerCase() === "true") return DEFAULT_SNAPSHOT;
+  return v;
+}
+
+function loadBoardFromSnapshot(jsonPath) {
+  const json = JSON.parse(readFileSync(jsonPath, "utf8"));
+  const board = json.data?.boards?.[0] ?? json.boards?.[0];
+  if (!board) throw new Error(`No board in snapshot: ${jsonPath}`);
+  return board;
+}
+
+async function fetchBoardFromApi() {
+  if (!TOKEN) {
+    throw new Error(
+      "MONDAY_API_TOKEN is not set. Add it to .env (see .env.example) or use GitHub Actions secret MONDAY_API_TOKEN. " +
+        "Fallback: set MONDAY_BOARD_JSON to a saved Monday API JSON file."
+    );
+  }
+  const res = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: TOKEN,
+      "API-Version": "2024-10",
+    },
+    body: JSON.stringify({ query: QUERY, variables: { ids: [BOARD_ID] } }),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json?.errors?.[0]?.message || json?.message || `HTTP ${res.status}`);
+  }
+  if (json.errors?.length) {
+    throw new Error(json.errors.map((e) => e.message).join("; "));
+  }
+  const board = json.data?.boards?.[0];
+  if (!board) throw new Error("Board not found or no access.");
+
+  const savePath = snapshotWritePath();
+  if (savePath) {
+    writeFileSync(savePath, JSON.stringify(json, null, 2), "utf8");
+    console.log(`Saved Monday snapshot: ${savePath}`);
+  }
+  return board;
+}
+
+async function fetchBoard() {
+  const jsonPath = process.env.MONDAY_BOARD_JSON;
+  if (jsonPath) {
+    if (!existsSync(jsonPath)) throw new Error(`MONDAY_BOARD_JSON file not found: ${jsonPath}`);
+    console.log(`Loading board from snapshot: ${jsonPath}`);
+    return loadBoardFromSnapshot(jsonPath);
+  }
+  console.log(`Fetching board ${BOARD_ID} from Monday API…`);
+  return fetchBoardFromApi();
+}
 
 const QUERY = `
 query ReleasePlan($ids: [ID!]!) {
@@ -202,38 +266,6 @@ function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId
     }));
 }
 
-async function fetchBoard() {
-  const jsonPath = process.env.MONDAY_BOARD_JSON;
-  if (jsonPath) {
-    const json = JSON.parse(readFileSync(jsonPath, "utf8"));
-    const board = json.data?.boards?.[0] ?? json.boards?.[0];
-    if (!board) throw new Error(`No board in snapshot: ${jsonPath}`);
-    return board;
-  }
-  if (!TOKEN) {
-    throw new Error("MONDAY_API_TOKEN is not set (or set MONDAY_BOARD_JSON to a Monday API JSON snapshot).");
-  }
-  const res = await fetch("https://api.monday.com/v2", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: TOKEN,
-      "API-Version": "2024-10",
-    },
-    body: JSON.stringify({ query: QUERY, variables: { ids: [BOARD_ID] } }),
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.errors?.[0]?.message || json?.message || `HTTP ${res.status}`);
-  }
-  if (json.errors?.length) {
-    throw new Error(json.errors.map((e) => e.message).join("; "));
-  }
-  const board = json.data?.boards?.[0];
-  if (!board) throw new Error("Board not found or no access.");
-  return board;
-}
-
 function buildFeatures(board) {
   const dropCol = findDropColumn(board.columns);
   const dropColId = dropCol?.id ?? null;
@@ -312,18 +344,20 @@ function buildFeatures(board) {
 async function main() {
   const board = await fetchBoard();
   const model = buildFeatures(board);
+  if (process.env.BOARD_TITLE) model.boardName = process.env.BOARD_TITLE;
+
   const generatedAt = new Date().toISOString();
-  const sourceLabel = process.env.MONDAY_BOARD_JSON
-    ? `Monday.com board ${esc(BOARD_ID)} (live snapshot)`
-    : `Monday.com board ${esc(BOARD_ID)}`;
+  const fromSnapshot = Boolean(process.env.MONDAY_BOARD_JSON);
+  const boardLabel = `${esc(model.boardName || "Roadmap")} · board ${esc(BOARD_ID)}`;
+  const sourceKind = fromSnapshot ? "local JSON snapshot" : "Monday API";
   const html = renderRoadmapHtml(model, {
     metaDescription: "Interactive roadmap grouped by release drop with nested sub-items (generated from Monday.com).",
-    sourceLineHtml: `Source: ${sourceLabel} · Updated ${esc(generatedAt)} · <a href="live-board.html" style="color:#fff;text-decoration:underline">Live board</a> (Monday login)`,
+    sourceLineHtml: `Source: ${boardLabel} (${sourceKind}) · Updated ${esc(generatedAt)} · <a href="live-board.html" style="color:#fff;text-decoration:underline">Live board</a> (Monday login)`,
   });
   const out = join(ROOT, "index.html");
   writeFileSync(out, html, "utf8");
   console.log(`Wrote ${out}`);
-  console.log(`Drops: ${model.dropKeys.join(" | ")}`);
+  console.log(`Parents: ${model.stats.uniqueCount} · Drops: ${model.dropKeys.join(" | ")}`);
   console.log(`Mapped columns — Drop: ${model.meta.dropColumn}; Status columns: ${model.meta.statusColumns || "—"}`);
 }
 

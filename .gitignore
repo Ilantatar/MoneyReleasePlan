@@ -1,4 +1,6 @@
 node_modules/
+.env
+data/monday-board-snapshot.json
 # Extra Monday downloads in capital-D folder (keep only data/board-export.xlsx in git)
 Data/eToro*.xlsx
 ~$*

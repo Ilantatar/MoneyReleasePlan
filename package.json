@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate-release-plan.mjs",
+    "generate:monday": "node scripts/generate-release-plan.mjs",
     "generate:xlsx": "node scripts/generate-from-xlsx.mjs"
   },
   "dependencies": {
