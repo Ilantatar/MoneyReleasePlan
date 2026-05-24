@@ -7,7 +7,7 @@
  *   MONDAY_BOARD_ID — optional, default 18396795757
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -203,8 +203,15 @@ function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId
 }
 
 async function fetchBoard() {
+  const jsonPath = process.env.MONDAY_BOARD_JSON;
+  if (jsonPath) {
+    const json = JSON.parse(readFileSync(jsonPath, "utf8"));
+    const board = json.data?.boards?.[0] ?? json.boards?.[0];
+    if (!board) throw new Error(`No board in snapshot: ${jsonPath}`);
+    return board;
+  }
   if (!TOKEN) {
-    throw new Error("MONDAY_API_TOKEN is not set.");
+    throw new Error("MONDAY_API_TOKEN is not set (or set MONDAY_BOARD_JSON to a Monday API JSON snapshot).");
   }
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
@@ -306,9 +313,12 @@ async function main() {
   const board = await fetchBoard();
   const model = buildFeatures(board);
   const generatedAt = new Date().toISOString();
+  const sourceLabel = process.env.MONDAY_BOARD_JSON
+    ? `Monday.com board ${esc(BOARD_ID)} (live snapshot)`
+    : `Monday.com board ${esc(BOARD_ID)}`;
   const html = renderRoadmapHtml(model, {
     metaDescription: "Interactive roadmap grouped by release drop with nested sub-items (generated from Monday.com).",
-    sourceLineHtml: `Source: Monday.com board ${esc(BOARD_ID)} · Updated ${esc(generatedAt)} · <a href="live-board.html" style="color:#fff;text-decoration:underline">Live board</a> (login required, no API token)`,
+    sourceLineHtml: `Source: ${sourceLabel} · Updated ${esc(generatedAt)} · <a href="live-board.html" style="color:#fff;text-decoration:underline">Live board</a> (Monday login)`,
   });
   const out = join(ROOT, "index.html");
   writeFileSync(out, html, "utf8");
