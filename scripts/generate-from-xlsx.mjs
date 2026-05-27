@@ -150,7 +150,7 @@ function parseMondayExportMatrix(matrix) {
 /**
  * Subitems for column `bucketKey`. `parentDropKeys` = drops on the parent row only.
  * - Extension column (!inParent): only subs whose sub-Drop includes `bucketKey`.
- * - Parent column + empty sub-Drop: show in every parent column.
+ * - Parent column + empty sub-Drop: show in every parent column (Excel col F; Monday API uses a separate sub Drop column).
  * - Parent column + sub-Drop overlaps parent: show only where sub-Drop matches `bucketKey`.
  * - Parent column + sub-Drop does not overlap parent: omit (those subs use extension columns only).
  */

@@ -184,6 +184,45 @@ function findDropColumn(columns) {
   return list.find((c) => /drop|release/i.test(c.title || "") && c.type !== "name");
 }
 
+/** Release-drop label on a column value (e.g. V4(8.6)). */
+function looksLikeReleaseDropLabel(text) {
+  const t = (text || "").trim();
+  return /^V\d/i.test(t) || /\bV\d\s*\(/i.test(t);
+}
+
+/**
+ * Sub-items use a separate Drop dropdown column (not listed on the parent board schema).
+ * Discover the column id most often used for V* labels on subitems.
+ */
+function discoverSubDropColumnId(board, parentDropColId) {
+  const override = process.env.MONDAY_SUB_DROP_COLUMN_ID?.trim();
+  if (override) return override;
+
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  for (const g of board.groups || []) {
+    for (const item of g.items_page?.items || []) {
+      for (const sub of item.subitems || []) {
+        for (const cv of sub.column_values || []) {
+          if (!cv?.id || cv.id === parentDropColId) continue;
+          if (cv.type !== "dropdown") continue;
+          if (!looksLikeReleaseDropLabel(cv.text)) continue;
+          counts.set(cv.id, (counts.get(cv.id) || 0) + 1);
+        }
+      }
+    }
+  }
+  let bestId = null;
+  let bestN = 0;
+  for (const [id, n] of counts) {
+    if (n > bestN) {
+      bestN = n;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
 /** All status-type columns on the main board (order preserved). */
 function statusColumnsInOrder(columns) {
   return (columns || []).filter((c) => c.type === "status");
@@ -236,12 +275,18 @@ function parentDropLabelsFromItem(item, dropColId, groupTitleFallback) {
   return [...new Set((raw || []).filter((d) => d && String(d).trim() && d !== "Unassigned"))];
 }
 
+/** Sub-item drop labels (sub-item Drop column, then parent Drop column as fallback). */
+function subDropLabelsFromItem(sub, parentDropColId, subDropColId) {
+  const colId = subDropColId || parentDropColId;
+  return parentDropLabelsFromItem(sub, colId, null);
+}
+
 /** Sub-item drops that are not on the parent (parent row vs sub row mismatch). */
-function orphanSubDropLabelsFromItem(item, dropColId, parentDropKeys) {
+function orphanSubDropLabelsFromItem(item, parentDropColId, subDropColId, parentDropKeys) {
   const parentSet = new Set(parentDropKeys);
   const out = new Set();
   for (const sub of item.subitems || []) {
-    for (const d of parentDropLabelsFromItem(sub, dropColId, null)) {
+    for (const d of subDropLabelsFromItem(sub, parentDropColId, subDropColId)) {
       if (d && !parentSet.has(d)) out.add(d);
     }
   }
@@ -249,11 +294,11 @@ function orphanSubDropLabelsFromItem(item, dropColId, parentDropKeys) {
 }
 
 /** Subitem in column bucketKey; parentDropKeys = parent's drops only. Orphan sub-drops (no overlap with parent) appear only on extension columns. */
-function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId) {
+function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, parentDropColId, subDropColId) {
   const inParent = parentDropKeys.includes(bucketKey);
   return (subitems || [])
     .filter((sub) => {
-      const sd = parentDropLabelsFromItem(sub, dropColId, null);
+      const sd = subDropLabelsFromItem(sub, parentDropColId, subDropColId);
       if (!inParent) return sd.includes(bucketKey);
       if (sd.length === 0) return true;
       const overlapsParent = sd.some((d) => parentDropKeys.includes(d));
@@ -269,6 +314,7 @@ function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, dropColId
 function buildFeatures(board) {
   const dropCol = findDropColumn(board.columns);
   const dropColId = dropCol?.id ?? null;
+  const subDropColId = discoverSubDropColumnId(board, dropColId);
 
   /** @type {Map<string, Array<{ id: string; name: string; status: string; subitems: { name: string; status: string }[] }>>} */
   const buckets = new Map();
@@ -298,10 +344,18 @@ function buildFeatures(board) {
         });
       }
 
-      const placementDrops = [...new Set([...dropLabels, ...orphanSubDropLabelsFromItem(item, dropColId, dropLabels)])];
+      const placementDrops = [
+        ...new Set([...dropLabels, ...orphanSubDropLabelsFromItem(item, dropColId, subDropColId, dropLabels)]),
+      ];
       for (const d of placementDrops) {
         const inParentColumn = dropLabels.includes(d);
-        const subFiltered = subitemsForBucketFromApi(item.subitems, d, dropLabels, dropColId).filter(
+        const subFiltered = subitemsForBucketFromApi(
+          item.subitems,
+          d,
+          dropLabels,
+          dropColId,
+          subDropColId
+        ).filter(
           (s) => !isHiddenRoadmapStatus(s.status)
         );
         if (subFiltered.length === 0 && !inParentColumn) continue;
@@ -334,6 +388,7 @@ function buildFeatures(board) {
     },
     meta: {
       dropColumn: dropCol?.title || dropCol?.id || "(group / unassigned)",
+      subDropColumn: subDropColId || "(same as parent / none)",
       statusColumns: statusColumnsInOrder(board.columns)
         .map((c) => c.title || c.id)
         .join(", "),
@@ -358,7 +413,9 @@ async function main() {
   writeFileSync(out, html, "utf8");
   console.log(`Wrote ${out}`);
   console.log(`Parents: ${model.stats.uniqueCount} · Drops: ${model.dropKeys.join(" | ")}`);
-  console.log(`Mapped columns — Drop: ${model.meta.dropColumn}; Status columns: ${model.meta.statusColumns || "—"}`);
+  console.log(
+    `Mapped columns — Drop: ${model.meta.dropColumn}; Sub Drop: ${model.meta.subDropColumn}; Status: ${model.meta.statusColumns || "—"}`
+  );
 }
 
 main().catch((e) => {
