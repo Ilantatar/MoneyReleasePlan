@@ -151,6 +151,7 @@ function parseMondayExportMatrix(matrix) {
  * Subitems for column `bucketKey`. `parentDropKeys` = drops on the parent row only.
  * - Extension column (!inParent): only subs whose sub-Drop includes `bucketKey`.
  * - Parent column + empty sub-Drop: show in every parent column (Excel col F; Monday API uses a separate sub Drop column).
+ * - Parent with sub-items: omit from a drop bucket when no sub-items belong in that bucket (even if parent Drop lists that release).
  * - Parent column + sub-Drop overlaps parent: show only where sub-Drop matches `bucketKey`.
  * - Parent column + sub-Drop does not overlap parent: omit (those subs use extension columns only).
  */
@@ -184,7 +185,10 @@ function buildModelFromParents(parents, boardName) {
     for (const d of placementDropsForParent(p)) {
       const inParentColumn = dropLabels.includes(d);
       const subFiltered = subitemsForBucket(dropLabels, p.subitems, d).filter((s) => !isHiddenRoadmapStatus(s.status));
-      if (subFiltered.length === 0 && !inParentColumn) continue;
+      const hasSubitems = (p.subitems || []).length > 0;
+      if (subFiltered.length === 0) {
+        if (hasSubitems || !inParentColumn) continue;
+      }
       if (!buckets.has(d)) buckets.set(d, []);
       buckets.get(d).push({
         id: p.id,

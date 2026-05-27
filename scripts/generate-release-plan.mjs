@@ -293,7 +293,11 @@ function orphanSubDropLabelsFromItem(item, parentDropColId, subDropColId, parent
   return [...out];
 }
 
-/** Subitem in column bucketKey; parentDropKeys = parent's drops only. Orphan sub-drops (no overlap with parent) appear only on extension columns. */
+/**
+ * Subitem in column bucketKey; parentDropKeys = parent's drops only.
+ * Orphan sub-drops (no overlap with parent) appear only on extension columns.
+ * Parents with sub-items are omitted from a drop when no sub-items match that bucket.
+ */
 function subitemsForBucketFromApi(subitems, bucketKey, parentDropKeys, parentDropColId, subDropColId) {
   const inParent = parentDropKeys.includes(bucketKey);
   return (subitems || [])
@@ -358,7 +362,10 @@ function buildFeatures(board) {
         ).filter(
           (s) => !isHiddenRoadmapStatus(s.status)
         );
-        if (subFiltered.length === 0 && !inParentColumn) continue;
+        const hasSubitems = (item.subitems || []).length > 0;
+        if (subFiltered.length === 0) {
+          if (hasSubitems || !inParentColumn) continue;
+        }
         if (!buckets.has(d)) buckets.set(d, []);
         buckets.get(d).push({
           id: item.id,
